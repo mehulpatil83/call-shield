@@ -1,0 +1,39 @@
+# secrets
+.env
+*.env
+!.env.example
+
+# python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# node / frontend build
+node_modules/
+dist/
+
+# personal data and large files: never commit recordings or model weights
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.ogg
+*.onnx
+*.pth
+*.pt
+models/
+results/
+variants/
+
+# editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# call-shield runtime data: transcripts and reports contain what people said
+.cache/
+reports/

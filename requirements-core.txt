@@ -1,0 +1,7 @@
+# core engine (use the same virtual environment as phase0; torch CPU build is needed only for the audio check)
+gnani-vachana>=0.8.1
+python-dotenv
+numpy
+scipy
+soundfile
+pytest
