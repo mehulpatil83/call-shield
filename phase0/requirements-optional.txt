@@ -1,0 +1,3 @@
+# Only for optional experiments
+faster-whisper      # whisper_probe.py (CPU int8 second opinion)
+pyttsx3             # make_synthetic.py (easy fake voice on Windows)

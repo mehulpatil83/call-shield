@@ -1,0 +1,8 @@
+# Install the CPU build of torch first (README step 1), then:
+gnani-vachana>=0.8.1
+python-dotenv
+numpy
+scipy
+soundfile
+huggingface_hub
+psutil

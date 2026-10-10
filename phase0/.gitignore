@@ -1,0 +1,10 @@
+.env
+.venv/
+models/
+results/
+variants/
+audio/*.wav
+audio/*.mp3
+audio/*.m4a
+audio/*.flac
+__pycache__/
