@@ -4,7 +4,7 @@ A privacy-conscious voice-scam and audio-authenticity checker for English, Hingl
 Great Indian AI Internship Challenge by Gnani.ai. Inspired by Panopticon (University of Peradeniya, AURORA AI
 IDEATHON 2026). This is an independent implementation: no Panopticon code is used.
 
-**Status:** Phase 0 (smoke tests) and Phase 1 (core engine) are done. The FastAPI and React app is next.
+**Status:** Phase 0 (smoke tests), Phase 1 (core engine) and Phase 2 (local web app) are done. Evaluation on fresh recordings is next.
 
 ## What it does
 1. Transcribes a consented recording with Gnani STT in English, Hinglish or Marathi (results cached on disk).
@@ -18,9 +18,12 @@ something harmless.
 
 ## Quick start (Windows, CPU only)
 ```
-pip install -r requirements-core.txt
+pip install -r requirements-app.txt
 python -m pytest tests -q
-python -m core.analyse --text phase0\audio\hinglish_scam.txt --lang hinglish
+python -m app.run
+```
+`python -m app.run` opens the web interface at http://127.0.0.1:8000. From the command line instead:
+```
 python -m core.analyse phase0\audio\en_scam.wav
 ```
 Put your Gnani key in `.env` (copy `phase0\.env.example`): `GNANI_API_KEY=...`.
@@ -30,7 +33,7 @@ Reports are written to `reports\` (open the `.html` file). More detail: `core\RE
 - `core/` the analysis engine (Gnani cache, rules, authenticity, report)
 - `tests/` automated tests (fake Gnani and fake model, so they cost nothing)
 - `phase0/` smoke tests for Gnani STT and the anti-spoofing model on a CPU-only machine
-- `app/` (coming) FastAPI backend and React/TypeScript frontend
+- `app/` FastAPI backend and React/TypeScript frontend (see `app/README.md`)
 
 ## Privacy
 Audio is sent to Gnani's API for transcription, so recordings need the speakers' consent. Recordings, transcripts,

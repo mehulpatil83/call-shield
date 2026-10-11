@@ -31,6 +31,7 @@ BAND_NOTE = ("Bands are provisional (from 9 clips, one real speaker) and will be
 class AuthResult:
     status: str                       # ok | inconclusive | unavailable
     label: str
+    code: str = ""                    # natural | synthetic | inconclusive_band | inconclusive_short | unavailable
     reason: str = ""
     median: float | None = None
     q25: float | None = None
@@ -94,17 +95,17 @@ def load_aasist_l(model_dir: Path | None = None):
 
 def label_from_scores(scores: list[float]) -> AuthResult:
     if len(scores) < MIN_WINDOWS:
-        return AuthResult("inconclusive", "Inconclusive: too little speech",
+        return AuthResult("inconclusive", "Inconclusive: too little speech", "inconclusive_short",
                           f"Only {len(scores)} usable window(s); at least {MIN_WINDOWS} (about 12 s of speech) are needed.",
                           n_windows=len(scores), window_scores=[round(s, 2) for s in scores])
     med, q25, q75 = (float(np.percentile(scores, p)) for p in (50, 25, 75))
     if med >= REAL_AT_LEAST:
-        label, status = "Consistent with natural speech (provisional)", "ok"
+        label, status, code = "Consistent with natural speech (provisional)", "ok", "natural"
     elif med <= SYNTH_AT_MOST:
-        label, status = "Synthetic-sounding (provisional)", "ok"
+        label, status, code = "Synthetic-sounding (provisional)", "ok", "synthetic"
     else:
-        label, status = "Inconclusive: score is between the two bands", "inconclusive"
-    return AuthResult(status, label, median=round(med, 2), q25=round(q25, 2), q75=round(q75, 2),
+        label, status, code = "Inconclusive: score is between the two bands", "inconclusive", "inconclusive_band"
+    return AuthResult(status, label, code, median=round(med, 2), q25=round(q25, 2), q75=round(q75, 2),
                       n_windows=len(scores), window_scores=[round(s, 2) for s in scores])
 
 
@@ -135,7 +136,7 @@ class AuthenticityScorer:
             wins = [w for w, r in zip(wins, rms) if r >= max(0.004, 0.2 * rms.max())]
         model = self._get_model()
         if model is None:
-            return AuthResult("unavailable", "Not available", self._failed or "model not loaded")
+            return AuthResult("unavailable", "Not available", "unavailable", self._failed or "model not loaded")
         scores = [float(np.asarray(model.score_batch([w.astype(np.float32)], [16000])).ravel()[0]) for w in wins]
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         cache_file.write_text(json.dumps({"scores": scores}))

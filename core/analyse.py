@@ -31,11 +31,19 @@ def analyse_transcripts(name: str, lang: str, variants: list[Variant] | None, te
     return report, render_html(report, hits_by_t)
 
 
-def analyse_file(path: Path, lang: str, transcriber: GnaniTranscriber, scorer: AuthenticityScorer | None):
+def analyse_file(path: Path, lang: str, transcriber: GnaniTranscriber, scorer: AuthenticityScorer | None,
+                 on_status=None, display_name: str | None = None):
+    """Shared by the command line and the web app. on_status(step) is called with
+    'transcribing', 'analysing', 'checking_audio' so a UI can show progress."""
+    say = on_status or (lambda step: None)
+    say("transcribing")
     variants = [v for v in transcriber.transcribe(path, lang) if v.text]
     texts = [v.text for v in variants]
+    say("analysing")
+    seconds = round(duration_seconds(path), 1)
+    say("checking_audio")
     auth = scorer.score(path) if scorer else None
-    return analyse_transcripts(path.name, lang, variants, texts, auth, round(duration_seconds(path), 1))
+    return analyse_transcripts(display_name or path.name, lang, variants, texts, auth, seconds)
 
 
 def main(argv=None) -> int:

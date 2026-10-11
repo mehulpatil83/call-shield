@@ -117,3 +117,20 @@ def test_text_mode_cli(tmp_path):
     assert main([str(f), "--text", str(f), "--out", str(tmp_path / "out")]) == 0
     rep = json.loads((tmp_path / "out" / "mr_test.json").read_text(encoding="utf-8"))
     assert rep["conversation"]["level"] == "low"
+
+
+def test_report_has_advice_and_notes(tmp_path):
+    wav = tmp_path / "en_call.wav"
+    make_wav(wav, seconds=20)
+    rest = FakeRest({"en-IN": SCAM["en_scam"]})
+    tr = GnaniTranscriber(api_key="k", cache_dir=tmp_path / "c", rest_client=rest)
+    seen = []
+    report, page = analyse_file(wav, "en", tr, AuthenticityScorer(model=FakeModel(-3.0), cache_dir=tmp_path / "a"),
+                                on_status=seen.append, display_name="shown.wav")
+    assert seen == ["transcribing", "analysing", "checking_audio"]
+    assert report["meta"]["file"] == "shown.wav" and report["meta"]["est_cost_rupees"] > 0
+    assert any("Do not share" in a for a in report["advice"]) and "What to do now" in page
+    assert report["conversation"]["digit_note"] and report["authenticity"]["plain_note"]
+    # cached second run costs nothing
+    r2, _ = analyse_file(wav, "en", tr, None)
+    assert r2["meta"]["est_cost_rupees"] == 0

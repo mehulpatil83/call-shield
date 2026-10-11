@@ -37,3 +37,8 @@ Thumbs.db
 # call-shield runtime data: transcripts and reports contain what people said
 .cache/
 reports/
+
+# app: local data (recordings, reports, database) and frontend build files
+data/
+app/frontend/node_modules/
+app/frontend/dist/
