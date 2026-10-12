@@ -1,7 +1,7 @@
 import pytest
 
 from core.rules import analyse_text, merge_results
-from tests.cases import BENIGN, HARD, SCAM
+from tests.cases import BENIGN, HARD, SCAM, WRONG_LANGUAGE
 
 
 @pytest.mark.parametrize("name", SCAM)
@@ -74,3 +74,29 @@ def test_marathi_now_is_not_urgency_but_rightnow_is():
 def test_clinic_conversation_has_no_indicators_at_all():
     r = analyse_text(BENIGN["mr_clinic"])
     assert r.level == "low" and r.hits == []
+
+
+def test_roman_marathi_scam_is_still_caught():
+    r = analyse_text(WRONG_LANGUAGE["mr_scam_as_en"])
+    assert r.level == "high", [(h.category, h.quote) for h in r.hits]
+
+
+def test_roman_marathi_clinic_chat_has_no_indicators():
+    r = analyse_text(WRONG_LANGUAGE["mr_clinic_as_en"])
+    assert r.level == "low" and r.hits == [], [(h.category, h.quote) for h in r.hits]
+
+
+def test_dont_hang_up_does_not_count_as_a_warning():
+    r = analyse_text("कृपया तुमच्या फोनवर आलेला सहा अंकी ओटीपी मला आत्ताच सांगा फोन कट करू नका")
+    assert any(h.category == "otp_request" for h in r.hits)
+
+
+def test_secrecy_about_this_call_survives_a_nearby_pin():
+    r = analyse_text("apna UPI PIN daaliye. Yeh baat kisi ko mat batana")
+    cats = {h.category for h in r.hits}
+    assert "credential_request" in cats and "secrecy" in cats
+
+
+def test_secrecy_about_the_code_itself_is_still_a_warning():
+    r = analyse_text("kisi ko apna OTP mat batana")
+    assert not any(h.category == "secrecy" for h in r.hits)

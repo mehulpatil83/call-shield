@@ -42,3 +42,9 @@ reports/
 data/
 app/frontend/node_modules/
 app/frontend/dist/
+
+# evaluation: people's voices, working copies, cached transcripts and results
+eval/recordings/
+eval/work/
+eval/.cache/
+eval/results/

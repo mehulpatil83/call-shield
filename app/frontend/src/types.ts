@@ -1,5 +1,5 @@
 export type Lang = 'en' | 'hi' | 'mr'
-export type SpeechLang = 'en' | 'hinglish' | 'mr' | 'hi'
+export type SpeechLang = 'auto' | 'en' | 'hinglish' | 'mr' | 'hi'
 export type Level = 'high' | 'elevated' | 'low'
 export type Status = 'queued' | 'running' | 'done' | 'error'
 export type Step = 'transcribing' | 'analysing' | 'checking_audio'
@@ -52,6 +52,7 @@ export interface Report {
   }
   authenticity: Authenticity | null
   limitations: string[]
+  language_warning?: 'not_english' | 'not_devanagari' | null
 }
 export interface AnalysisSummary {
   id: string

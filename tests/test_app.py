@@ -130,3 +130,10 @@ def test_health_does_not_expose_the_key(tmp_path, monkeypatch):
     r = c.get("/api/health")
     assert r.json()["gnani_key_present"] is True and "super-secret-key" not in r.text
     assert r.headers["x-content-type-options"] == "nosniff"
+
+
+def test_auto_language_is_accepted(tmp_path):
+    c, _ = make_client(tmp_path, texts={"en-IN": SCAM["en_scam"], "hi-IN": "", "mr-IN": ""})
+    r = upload(c, language="auto")
+    assert r.status_code == 202
+    assert wait_done(c, r.json()["id"])["status"] == "done"

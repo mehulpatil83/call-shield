@@ -12,6 +12,7 @@ from pathlib import Path
 from . import config
 from .audio_io import duration_seconds
 from .authenticity import AuthenticityScorer, AuthResult
+from .langcheck import check_language
 from .gnani_client import GnaniTranscriber, TranscriptionError, Variant
 from .report import build_report, render_html
 from .rules import analyse_text, detect, merge_results
@@ -27,6 +28,8 @@ def analyse_transcripts(name: str, lang: str, variants: list[Variant] | None, te
     results = [analyse_text(t, source=(variants[i].code if variants else "")) for i, t in enumerate(texts)]
     merged = merge_results(results, texts)
     report = build_report(name, lang, variants, results, merged, auth, audio_seconds, texts)
+    warnings = [check_language(t, lang) for t in texts]
+    report["language_warning"] = warnings[0] if warnings and all(warnings) else None
     hits_by_t = [r.hits for r in results]
     return report, render_html(report, hits_by_t)
 

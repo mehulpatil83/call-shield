@@ -8,7 +8,7 @@ import soundfile as sf
 from core.analyse import analyse_file, analyse_transcripts, main
 from core.authenticity import AuthenticityScorer, label_from_scores
 from core.gnani_client import GnaniTranscriber, TranscriptionError
-from tests.cases import BENIGN, SCAM
+from tests.cases import BENIGN, SCAM, WRONG_LANGUAGE
 
 
 def make_wav(path: Path, seconds=20, sr=16000, amp=0.2):
@@ -134,3 +134,32 @@ def test_report_has_advice_and_notes(tmp_path):
     # cached second run costs nothing
     r2, _ = analyse_file(wav, "en", tr, None)
     assert r2["meta"]["est_cost_rupees"] == 0
+
+
+def test_wrong_language_makes_the_report_unreliable(tmp_path):
+    wav = tmp_path / "en_call.wav"
+    make_wav(wav)
+    rest = FakeRest({"en-IN": WRONG_LANGUAGE["mr_clinic_as_en"]})
+    tr = GnaniTranscriber(api_key="k", cache_dir=tmp_path / "c", rest_client=rest)
+    report, _ = analyse_file(wav, "en", tr, None)
+    assert report["language_warning"] == "not_english" and report["conversation"]["level"] == "low"
+    _, page = analyse_file(wav, "en", tr, None)
+    assert "cannot be trusted" in page and "Could not be checked reliably" in page
+
+
+def test_right_language_has_no_warning(tmp_path):
+    wav = tmp_path / "en_call.wav"
+    make_wav(wav)
+    rest = FakeRest({"en-IN": SCAM["en_scam"]})
+    report, _ = analyse_file(wav, "en", GnaniTranscriber(api_key="k", cache_dir=tmp_path / "c", rest_client=rest), None)
+    assert report["language_warning"] is None
+
+
+def test_auto_language_tries_all_three_and_merges(tmp_path):
+    wav = tmp_path / "x_call.wav"
+    make_wav(wav)
+    rest = FakeRest({"en-IN": WRONG_LANGUAGE["mr_clinic_as_en"], "hi-IN": "", "mr-IN": SCAM["mr_scam"]})
+    tr = GnaniTranscriber(api_key="k", cache_dir=tmp_path / "c", rest_client=rest)
+    report, _ = analyse_file(wav, "auto", tr, None)
+    assert rest.calls == ["en-IN", "hi-IN", "mr-IN"]
+    assert report["conversation"]["level"] == "high" and report["language_warning"] is None

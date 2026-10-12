@@ -44,7 +44,7 @@ describe('UploadCard', () => {
     await user.click(screen.getByRole('checkbox', { name: new RegExp(STRINGS.en.consent.slice(0, 20)) }))
     expect(button).toBeEnabled()
     await user.click(button)
-    expect(onSubmit).toHaveBeenCalledWith(expect.any(File), 'en', true, false)
+    expect(onSubmit).toHaveBeenCalledWith(expect.any(File), 'auto', true, false)
   })
   it('warns when the Gnani key is missing and when the file is too large', async () => {
     const user = userEvent.setup()
@@ -92,6 +92,27 @@ describe('low-risk report', () => {
     expect(screen.getByRole('heading', { name: STRINGS.en.minor })).toBeInTheDocument()
     expect(screen.getByText(STRINGS.en.minorNote)).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: STRINGS.en.evidence })).not.toBeInTheDocument()
+  })
+})
+
+describe('wrong-language report', () => {
+  it('says the result cannot be trusted instead of "no scam tactics found"', () => {
+    const wrong: AnalysisDetail = {
+      ...detail, level: 'low',
+      report: { ...detail.report!, language_warning: 'not_english',
+        conversation: { ...detail.report!.conversation, level: 'low', hits: [] } },
+    }
+    render(<ReportView detail={wrong} t={STRINGS.mr} onDelete={() => {}} onBack={() => {}} />)
+    expect(screen.getByTestId('level-badge')).toHaveTextContent(STRINGS.mr.unreliable)
+    expect(screen.getByTestId('language-warning')).toHaveTextContent(STRINGS.mr.languageWarning.not_english)
+    expect(screen.getByTestId('plain-summary')).toHaveTextContent(STRINGS.mr.unreliablePlain)
+    expect(screen.queryByText(STRINGS.mr.levels.low)).not.toBeInTheDocument()
+  })
+  it('still shows a real high-risk finding next to the warning', () => {
+    const risky: AnalysisDetail = { ...detail, report: { ...detail.report!, language_warning: 'not_english' } }
+    render(<ReportView detail={risky} t={STRINGS.en} onDelete={() => {}} onBack={() => {}} />)
+    expect(screen.getByTestId('level-badge')).toHaveTextContent(STRINGS.en.levels.high)
+    expect(screen.getByTestId('language-warning')).toBeInTheDocument()
   })
 })
 

@@ -20,6 +20,15 @@ LIMITATIONS = [
     "A real person can run a scam, and a synthetic voice can say something harmless. The two findings are independent.",
     "Audio was sent to Gnani's service for transcription. Only analyse recordings with the speakers' consent.",
 ]
+LANGUAGE_WARNING = {
+    "not_english": "This transcript does not look like English. If the recording is in another language, the scam check can miss things.",
+    "not_devanagari": "This transcript is not in the Devanagari script expected for the language you chose. The scam check can miss things.",
+}
+UNRELIABLE_PLAIN = 'The transcript does not look like the language you chose, so "no scam tactics found" cannot be trusted.'
+UNRELIABLE_ADVICE = [
+    'Delete this analysis and upload the recording again with the correct language, or choose "Not sure".',
+    "If the call felt suspicious, treat it as suspicious: do not share any code and call the bank on its official number.",
+]
 LEVEL_TEXT = {"high": "High risk", "elevated": "Worth checking", "low": "No scam tactics found"}
 PLAIN = {
     "high": "This call shows several signs of a scam.",
@@ -106,6 +115,13 @@ def _bars(auth: dict) -> str:
 def render_html(report: dict, hits_by_transcript: list[list]) -> str:
     esc = html.escape
     conv, auth, meta = report["conversation"], report["authenticity"], report["meta"]
+    warn = report.get("language_warning")
+    unreliable = bool(warn) and conv["level"] == "low"
+    badge_label = "Could not be checked reliably" if unreliable else conv["label"]
+    badge_class = "neutral" if unreliable else conv["level"]
+    plain = UNRELIABLE_PLAIN if unreliable else report["plain_summary"]
+    advice = UNRELIABLE_ADVICE if unreliable else report["advice"]
+    warn_html = f'<p class="card advice" role="alert"><b>{esc(LANGUAGE_WARNING.get(warn, ""))}</b></p>' if warn else ""
     ev = "".join(
         f'<li><span class="tag {esc(h["kind"])}">{esc(h["category"].replace("_", " "))}</span> '
         f'<q>{esc(h["quote"])}</q><br><small>{esc(h["explanation"])}'
@@ -134,7 +150,7 @@ body{{margin:0;padding:20px;background:var(--bg);color:var(--fg);font:16px/1.5 s
 .grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}}
 .card{{background:var(--card);border-radius:12px;padding:16px}} h1{{font-size:1.4rem}} h2{{font-size:1.1rem;margin-top:0}}
 .badge{{display:inline-block;padding:4px 12px;border-radius:999px;font-weight:600;color:#fff}}
-.high{{background:#c62828}}.elevated{{background:#ef6c00}}.low{{background:#2e7d32}}
+.high{{background:#c62828}}.elevated{{background:#ef6c00}}.low{{background:#2e7d32}}.neutral{{background:#5f6368}}
 .big{{font-size:1.15rem;font-weight:600}} small,.mut{{color:var(--mut)}} ul{{padding-left:1.1rem}} li{{margin:.4rem 0}}
 .tag{{font-size:.75rem;padding:1px 8px;border-radius:6px;background:#5c6bc0;color:#fff}}
 .tag.request{{background:#c62828}}.tag.pressure{{background:#ef6c00}}.tag.context{{background:#6d4c41}}.tag.warning{{background:#2e7d32}}
@@ -145,11 +161,11 @@ mark.ctx{{background:#d7ccc8}} mark.warn{{background:#c8e6c9}}
 </style></head><body>
 <h1>call-shield report</h1>
 <p class="mut">File {esc(meta["file"])} · language {esc(meta["language"])} · {esc(meta["created"])} · engine {esc(meta["engine_version"])}</p>
-<p class="big">{esc(report["plain_summary"])}</p>
-<section class="card advice"><h2>What to do now</h2><ul>{"".join("<li>" + esc(a) + "</li>" for a in report["advice"])}</ul></section>
+{warn_html}<p class="big">{esc(plain)}</p>
+<section class="card advice"><h2>What to do now</h2><ul>{"".join("<li>" + esc(a) + "</li>" for a in advice)}</ul></section>
 <p>Two independent checks: <b>what is said</b> and <b>how the voice sounds</b>. Neither one overrides the other.</p>
 <div class="grid">
-<section class="card"><h2>1. Conversation</h2><p><span class="badge {esc(conv["level"])}">{esc(conv["label"])}</span></p>
+<section class="card"><h2>1. Conversation</h2><p><span class="badge {esc(badge_class)}">{esc(badge_label)}</span></p>
 <p>{esc(conv["summary"])}</p><ul>{ev}</ul>{("<h3>Spoken number sequences</h3><p><small>" + esc(conv.get("digit_note", "")) + "</small></p><ul>" + digits + "</ul>") if digits else ""}</section>
 <section class="card"><h2>2. Audio authenticity</h2>{auth_html}</section></div>
 <section class="card" style="margin-top:16px"><h2>Transcript with evidence</h2>

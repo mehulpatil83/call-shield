@@ -8,7 +8,7 @@ To extend: add a phrase to the right list. Run `python -m pytest tests` afterwar
 
 # ---- sensitive things a scammer asks for ---------------------------------------------------------
 OTP_TERMS = [
-    "otp", "o t p", "one time password", "one time pin", "verification code", "security code",
+    "otp", "o t p", "saha anki code", "saha ankhi code", "one time password", "one time pin", "verification code", "security code",
     "six digit code", "6 digit code", "six digit otp", "6 digit otp", "six digit pin", "passcode",
     "ओटीपी", "ओ टी पी", "ओटिपी", "वन टाइम पासवर्ड", "सिक्स डिजिट कोड", "सिक्स डिजिट ओटीपी", "छह अंकों का कोड",
     "सहा अंकी कोड", "सहा अंकी ओटीपी", "वेरिफिकेशन कोड",
@@ -28,7 +28,12 @@ DISCLOSE_VERBS = [
     "bhejo", "bolo", "boliye", "share karo", "share kijiye", "share karein",
     "बताइए", "बताइये", "बताओ", "बता दीजिए", "दीजिए", "दीजिये", "भेजिए", "भेजो", "बोलिए", "शेयर", "बताएं",
     "बताना", "सांगा", "सांगावे", "द्या", "पाठवा", "टाका", "सांगितला", "सांगितलं", "मला सांगा",
+    "sanga", "sang", "sangaa", "dya", "dyaa", "pathva", "pathav", "taka", "mala sanga",
+    "daaliye", "daliye", "daaliyega", "dalo", "likhiye", "डालिए", "डालिये", "डालो", "दर्ज करें",
 ]
+# "this" references: "don't tell anyone ABOUT THIS CALL" is a scammer's secrecy demand even when a PIN is mentioned nearby
+SECRECY_THIS = ["about this call", "about this", "this call", "yeh baat", "ye baat", "is baat", "is call",
+                "ये बात", "यह बात", "इस बात", "ही गोष्ट", "ही बाब", "हे"]
 
 # ---- words that turn a mention into a warning ("never share your OTP") --------------------------------
 WARNING_CUES = [
@@ -38,6 +43,7 @@ WARNING_CUES = [
     "phone kaat", "kaat dijiye", "call kaat",
     "नहीं", "नही", "न करें", "न कीजिए", "मत", "कभी नहीं", "कभी भी नहीं", "फोन काट", "कॉल काट",
     "नका", "नकोस", "नाही", "कधीही", "कधीच", "कधी नाही", "कट करा", "फोन कट",
+    "naka", "nako", "nakos", "kadhihi", "kadhich", "kadhi nahi", "kunalahi", "kat kara", "phone kat",
 ]
 
 # ---- indicator categories --------------------------------------------------------------------------
@@ -47,6 +53,8 @@ CATEGORIES = {
         "kind": "request",
         "explain": "Asks for money, a transfer or a payment link.",
         "phrases": [
+            "link par bhejiye", "is link par", "rupaye bhejiye", "paise bhejiye",
+            "paise bhara", "paise pathva", "link pathvto", "link pathva", "payment kara",
             "transfer of", "process a transfer", "process an urgent transfer", "transfer the money", "send the money",
             "send money", "make the payment", "make a payment", "pay the fine", "pay a fine", "pay the amount",
             "payment link", "click the link", "click on the link", "upi link", "gift card", "gift cards",
@@ -61,6 +69,7 @@ CATEGORIES = {
         "kind": "request",
         "explain": "Asks you to install a remote-control app or share your screen, which lets a stranger operate your device.",
         "phrases": [
+            "app download kara", "app install kara", "screen share kara",
             "anydesk", "any desk", "teamviewer", "team viewer", "quicksupport", "quick support", "ultraviewer",
             "rustdesk", "screen sharing", "share your screen", "remote access", "remote desktop",
             "download the app", "install the app", "download an app", "install this app", "download this app",
@@ -73,6 +82,7 @@ CATEGORIES = {
         "kind": "pressure",
         "explain": "Pushes you to act immediately so you do not stop and think.",
         "phrases": [
+            "lagech", "aattach", "atach", "tabadtob", "taabadtob", "tatkal", "aaj ratri paryant",
             "right now", "immediately", "urgent", "urgently", "as soon as possible", "asap", "tonight", "by tonight",
             "by midnight", "within an hour", "within one hour", "within ten minutes", "within 24 hours", "no time",
             "hurry", "quickly", "last chance", "by end of day",
@@ -85,6 +95,8 @@ CATEGORIES = {
         "kind": "pressure",
         "explain": "Threatens a bad consequence (blocked account, legal action, disconnection) to scare you into complying.",
         "phrases": [
+            "kaat diya jayega", "kaat diya jaayega", "kat diya jayega", "connection kaat", "band kar diya jayega",
+            "band hoil", "khate band hoil", "block hoil", "todle jail", "gothavle jail", "dand lagel", "karvai hoil",
             "will be blocked", "will be suspended", "will be frozen", "will be closed", "will be disconnected",
             "will be deactivated", "will be cancelled", "will be canceled", "legal action", "police case",
             "you will be arrested", "arrest warrant", "penalty will", "you will lose",
@@ -99,6 +111,7 @@ CATEGORIES = {
         "kind": "pressure",
         "explain": "Tells you to keep the call secret, which stops you from checking with anyone.",
         "phrases": [
+            "kunalahi sangu naka", "kunala sangu naka", "kunalahi sangu nakos",
             "don't tell anyone", "do not tell anyone", "don't tell anybody", "keep this confidential",
             "keep it secret", "this is confidential", "between us", "don't share this with anyone",
             "kisi ko mat batana", "kisi ko mat bataiye", "kisi ko nahi batana", "kisi ko bhi mat batana",
@@ -110,6 +123,8 @@ CATEGORIES = {
         "kind": "pressure",
         "explain": "Discourages you from verifying, hanging up or following the normal process.",
         "phrases": [
+            "call kaatna mat", "kaatna mat", "call mat kaatna", "phone mat kaatna",
+            "phone thevu naka", "phone thevu nakos",
             "skip the portal", "skip the verification", "skip approval", "bypass", "no need to verify",
             "don't call back", "don't hang up", "do not hang up", "don't disconnect", "stay on the line",
             "do not call the bank", "don't call the bank", "without approval", "just do it",
@@ -122,6 +137,8 @@ CATEGORIES = {
         "kind": "context",
         "explain": "Claims to be a bank, company, government body or senior colleague. Scammers use authority to gain trust.",
         "phrases": [
+            "vibhag se bol raha", "vibhag se bol rahi", "bijli vibhag", "विभाग से बोल रहा", "विभाग से बोल रही",
+            "bankentun bolatoy", "bankentun bolto", "bankentun bolte", "bankentun", "vij vitaran",
             "from your bank", "from the bank", "calling from your bank", "bank security department",
             "security department", "fraud department", "bank manager", "customer care executive", "rbi",
             "reserve bank of india", "cyber crime", "cyber cell", "income tax department", "customs department",

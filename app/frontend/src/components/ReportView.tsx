@@ -19,6 +19,8 @@ export default function ReportView({ detail, t, onDelete, onBack }: Props) {
   const { conversation: conv, authenticity: auth } = report
   const level = conv.level
   const shownHits = conv.hits
+  const warning = report.language_warning ?? null
+  const unreliable = warning !== null && level === 'low'
   const minorOnly = level === 'low' && shownHits.some((h) => h.kind !== 'warning')
 
   return (
@@ -34,16 +36,17 @@ export default function ReportView({ detail, t, onDelete, onBack }: Props) {
         {report.meta.audio_seconds ? ` · ${report.meta.audio_seconds}s` : ''}
         {report.meta.est_cost_rupees ? ` · ₹${report.meta.est_cost_rupees}` : ''}</p>
 
-      <p className="plain" data-testid="plain-summary">{t.plain[level]}</p>
+      {warning && <p className="notice warn" role="alert" data-testid="language-warning">{t.languageWarning[warning]}</p>}
+      <p className="plain" data-testid="plain-summary">{unreliable ? t.unreliablePlain : t.plain[level]}</p>
       <section className="card advice" aria-labelledby="todo-title">
         <h3 id="todo-title">{t.whatToDo}</h3>
-        <ul>{t.advice[level].map((a) => <li key={a}>{a}</li>)}</ul>
+        <ul>{(unreliable ? t.unreliableAdvice : t.advice[level]).map((a) => <li key={a}>{a}</li>)}</ul>
       </section>
 
       <div className="grid">
         <section className="card" aria-labelledby="conv-title">
           <h3 id="conv-title">1. {t.conversation}</h3>
-          <p><span className={`badge ${level}`} data-testid="level-badge">{t.levels[level]}</span></p>
+          <p><span className={`badge ${unreliable ? 'neutral' : level}`} data-testid="level-badge">{unreliable ? t.unreliable : t.levels[level]}</span></p>
           <h4>{minorOnly ? t.minor : t.evidence}</h4>
           {minorOnly && <p><small>{t.minorNote}</small></p>}
           {shownHits.length === 0 ? <p>{t.noEvidence}</p> : (

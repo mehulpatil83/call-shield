@@ -8,7 +8,8 @@ ENV_FILES = [ROOT / ".env", ROOT / "phase0" / ".env"]
 
 # Language key -> Gnani language codes. Hinglish is transcribed twice (Roman-script via en-IN, Devanagari via
 # hi-IN) because on a real recording each caught terms the other missed (Phase 0). Streaming accepts only single codes.
-LANG_CODES = {"en": ["en-IN"], "mr": ["mr-IN"], "hi": ["hi-IN"], "hinglish": ["en-IN", "hi-IN"]}
+LANG_CODES = {"en": ["en-IN"], "mr": ["mr-IN"], "hi": ["hi-IN"], "hinglish": ["en-IN", "hi-IN"],
+              "auto": ["en-IN", "hi-IN", "mr-IN"]}   # "auto": not sure which language, costs about 3x
 REST_MAX_SECONDS = 60
 RUPEES_PER_MIN = 0.47          # measured in Phase 0: Rs 9.88 for about 21 min
 

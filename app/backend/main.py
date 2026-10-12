@@ -21,7 +21,7 @@ from .storage import ID_RE, Store
 
 log = logging.getLogger("call-shield")
 ALLOWED_EXT = {".wav", ".mp3", ".m4a", ".flac", ".ogg"}
-LANGUAGES = {"en": "English", "hinglish": "Hinglish", "mr": "Marathi", "hi": "Hindi"}
+LANGUAGES = {"auto": "Not sure (English, Hindi and Marathi)", "en": "English", "hinglish": "Hinglish", "mr": "Marathi", "hi": "Hindi"}
 CONSENT_TEXT_VERSION = "2026-10-v1"
 FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 REPORT_CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'"

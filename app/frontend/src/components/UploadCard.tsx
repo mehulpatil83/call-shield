@@ -14,7 +14,7 @@ interface Props {
 
 export default function UploadCard({ t, maxMb, keyPresent, busy, onSubmit }: Props) {
   const [file, setFile] = useState<File | null>(null)
-  const [language, setLanguage] = useState<SpeechLang>('en')
+  const [language, setLanguage] = useState<SpeechLang>('auto')
   const [consent, setConsent] = useState(false)
   const [skipAudio, setSkipAudio] = useState(false)
   const [dragging, setDragging] = useState(false)

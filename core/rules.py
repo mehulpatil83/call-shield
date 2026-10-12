@@ -25,6 +25,7 @@ _C = {
     "cred": compile_phrases(L.CREDENTIAL_TERMS),
     "verbs": compile_phrases(L.DISCLOSE_VERBS),
     "warn": compile_phrases(L.WARNING_CUES),
+    "this": compile_phrases(L.SECRECY_THIS),
     **{name: compile_phrases(c["phrases"]) for name, c in L.CATEGORIES.items()},
 }
 
@@ -63,6 +64,10 @@ def _near(a: Match, b: Match, window: int) -> bool:
 def detect(text: str, source: str = "") -> tuple[list[Hit], list[DigitRun], list[Token]]:
     toks = tokenize(text)
     m = {k: find_matches(toks, v) for k, v in _C.items()}
+    # a phrase like "do not hang up" is a scammer's instruction, not cautionary wording: it must not cancel a request
+    strong_secrecy = [x for x in m["secrecy"] if any(_near(x, t, 4) for t in m["this"])]
+    instructions = m["verification_bypass"] + strong_secrecy
+    m["warn"] = [w for w in m["warn"] if not any(w.i <= b.j and b.i <= w.j for b in instructions)]
     hits: list[Hit] = []
 
     def add(category, kind, i, j, explanation):
@@ -88,7 +93,8 @@ def detect(text: str, source: str = "") -> tuple[list[Hit], list[DigitRun], list
     # 2) the other categories (secrecy near a code is a warning, e.g. "don't tell anyone your OTP")
     for name, cfg in L.CATEGORIES.items():
         for mt in m[name]:
-            if name == "secrecy" and any(_near(mt, s, SECRECY_WINDOW) for s in sensitive):
+            if name == "secrecy" and any(_near(mt, s, SECRECY_WINDOW) for s in sensitive) \
+                    and not any(_near(mt, t, 4) for t in m["this"]):
                 continue
             add(name, cfg["kind"], mt.i, mt.j, cfg["explain"])
 

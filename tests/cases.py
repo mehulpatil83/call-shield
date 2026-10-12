@@ -19,6 +19,12 @@ BENIGN = {
     "mr_clinic": "डॉक्टर मला खूप थकवा जाणवतो आणि कधी कधी डोकेदुखी होते ठीक आहे आत्ता काळजी करू नका हा साधारण त्रास आहे रक्ताची तपासणी करू या रिपोर्ट आल्यावर पुढे काय करायचं ते सांगतो धन्यवाद डॉक्टर",
     "small_talk": "Hello, how are you? I wanted to ask whether you are free for dinner on Sunday. Let me know and I will book a table for four people.",
 }
+# Marathi speech transcribed with the ENGLISH model (the user picked the wrong language): Roman-script phonetic text
+WRONG_LANGUAGE = {
+    "mr_clinic_as_en": "namaskar yeah basa me doctor mehta kunta rashiyalat namaskar doctor magil do nathudan pasun khoob thakva jaana ho toh varanvar dukhi dukhi hote theek hai dhokhe dukhi satat aaste ka ki kadhi kadhi kadhi kadhi visheshtah sandhya ka he jast hote kadhi kadhi chakkar alay sarkhe baat samajhala jhoop vyavasthit hoti hai ka jeevan vevar hota hai ka kama sa tan jasta hai doctor jhoop neet nahi kadhi kadhi jevar nahi chukta tej kaaran su sakta ek sadha blood test karu ya raktashi kamtar tha ki vah vitamin chi kami aayega theek hai doctor",
+    "mr_scam_as_en": "namaskar mi tumchya bankentun bolatoy tumche kyc update baaki aahe tyamule aaj ratri paryant tumche khate band hoil krupaya tumchya phonevar alela otp mala sanga saha anki code ata lagech sanga nahitar khate gothavle jail",
+}
+
 HARD = {
     # legitimate, but an OTP is requested: the engine should say 'elevated' (check who is asking), never 'high'
     "en_delivery_otp": "Hello ma'am, I'm the delivery executive with your parcel, I'm at your gate. The delivery OTP is on your app, please share it so I can hand over the parcel. It's four four one seven.",

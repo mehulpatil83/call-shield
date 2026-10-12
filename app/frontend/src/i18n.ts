@@ -39,6 +39,10 @@ export interface Dict {
   evidence: string
   minor: string
   minorNote: string
+  unreliable: string
+  unreliablePlain: string
+  unreliableAdvice: string[]
+  languageWarning: Record<'not_english' | 'not_devanagari', string>
   noEvidence: string
   transcript: string
   transcriptHint: string
@@ -68,7 +72,7 @@ const en: Dict = {
   dropHint: 'or drop it here (WAV, MP3, M4A, FLAC or OGG)',
   noFile: 'No file chosen',
   languageLabel: 'Language spoken in the recording',
-  langs: { en: 'English', hinglish: 'Hinglish (Hindi and English mixed)', mr: 'Marathi', hi: 'Hindi' },
+  langs: { auto: 'Not sure (checks English, Hindi and Marathi; about 3x the cost)', en: 'English', hinglish: 'Hinglish (Hindi and English mixed)', mr: 'Marathi', hi: 'Hindi' },
   consent: "I have permission from everyone in this recording to analyse it. I understand the audio is sent to Gnani's speech service to be transcribed.",
   skipAudio: 'Skip the voice check (faster)',
   analyse: 'Analyse',
@@ -112,6 +116,16 @@ const en: Dict = {
   evidence: 'Evidence',
   minor: 'Minor signals',
   minorNote: 'These alone are not enough to raise the risk level.',
+  unreliable: 'Could not be checked reliably',
+  unreliablePlain: 'The transcript does not look like the language you chose, so "no scam tactics found" cannot be trusted.',
+  unreliableAdvice: [
+    'Delete this analysis and upload the recording again with the correct language, or choose "Not sure".',
+    'If the call felt suspicious, treat it as suspicious: do not share any code and call the bank on its official number.',
+  ],
+  languageWarning: {
+    not_english: 'This transcript does not look like English. If the recording is in another language, the scam check can miss things.',
+    not_devanagari: 'This transcript is not in the Devanagari script expected for the language you chose. The scam check can miss things.',
+  },
   noEvidence: 'No indicators matched.',
   transcript: 'Transcript',
   transcriptHint: 'Tap a highlighted phrase to see why it was flagged.',
@@ -169,7 +183,7 @@ const hi: Dict = {
   dropHint: 'या यहाँ छोड़ें (WAV, MP3, M4A, FLAC या OGG)',
   noFile: 'कोई फ़ाइल नहीं चुनी',
   languageLabel: 'रिकॉर्डिंग में बोली गई भाषा',
-  langs: { en: 'अंग्रेज़ी', hinglish: 'हिंग्लिश (हिंदी और अंग्रेज़ी मिली-जुली)', mr: 'मराठी', hi: 'हिंदी' },
+  langs: { auto: 'पक्का नहीं (अंग्रेज़ी, हिंदी और मराठी तीनों में जाँच; लागत लगभग 3 गुना)', en: 'अंग्रेज़ी', hinglish: 'हिंग्लिश (हिंदी और अंग्रेज़ी मिली-जुली)', mr: 'मराठी', hi: 'हिंदी' },
   consent: 'इस रिकॉर्डिंग में मौजूद सभी लोगों से मुझे इसे जाँचने की अनुमति है। मैं समझता/समझती हूँ कि ऑडियो को टेक्स्ट में बदलने के लिए उसे Gnani की स्पीच सेवा को भेजा जाता है।',
   skipAudio: 'आवाज़ की जाँच छोड़ें (तेज़)',
   analyse: 'जाँचें',
@@ -213,6 +227,16 @@ const hi: Dict = {
   evidence: 'सबूत',
   minor: 'छोटे संकेत',
   minorNote: 'ये अकेले जोखिम स्तर बढ़ाने के लिए काफ़ी नहीं हैं।',
+  unreliable: 'भरोसे से जाँच नहीं हो सकी',
+  unreliablePlain: 'ट्रांसक्रिप्ट आपकी चुनी हुई भाषा जैसा नहीं दिखता, इसलिए "ठगी के संकेत नहीं मिले" पर भरोसा नहीं किया जा सकता।',
+  unreliableAdvice: [
+    'इस जाँच को हटाएँ और सही भाषा चुनकर रिकॉर्डिंग फिर से अपलोड करें, या "पक्का नहीं" चुनें।',
+    'अगर कॉल संदिग्ध लगी थी, तो उसे संदिग्ध ही मानें: कोई कोड साझा न करें और बैंक के आधिकारिक नंबर पर खुद कॉल करें।',
+  ],
+  languageWarning: {
+    not_english: 'यह ट्रांसक्रिप्ट अंग्रेज़ी जैसा नहीं दिखता। अगर रिकॉर्डिंग किसी और भाषा में है, तो ठगी की जाँच में कुछ छूट सकता है।',
+    not_devanagari: 'आपकी चुनी भाषा के लिए अपेक्षित देवनागरी लिपि में यह ट्रांसक्रिप्ट नहीं है। ठगी की जाँच में कुछ छूट सकता है।',
+  },
   noEvidence: 'कोई संकेत नहीं मिला।',
   transcript: 'ट्रांसक्रिप्ट',
   transcriptHint: 'किसी हाइलाइट किए गए वाक्यांश पर टैप करें, पता चलेगा कि उसे क्यों चिह्नित किया गया।',
@@ -269,7 +293,7 @@ const mr: Dict = {
   dropHint: 'किंवा इथे टाका (WAV, MP3, M4A, FLAC किंवा OGG)',
   noFile: 'कोणतीही फाइल निवडलेली नाही',
   languageLabel: 'रेकॉर्डिंगमध्ये बोलली गेलेली भाषा',
-  langs: { en: 'इंग्रजी', hinglish: 'हिंग्लिश (हिंदी आणि इंग्रजी मिश्र)', mr: 'मराठी', hi: 'हिंदी' },
+  langs: { auto: 'खात्री नाही (इंग्रजी, हिंदी आणि मराठी तिन्हीत तपासते; खर्च सुमारे 3 पट)', en: 'इंग्रजी', hinglish: 'हिंग्लिश (हिंदी आणि इंग्रजी मिश्र)', mr: 'मराठी', hi: 'हिंदी' },
   consent: 'या रेकॉर्डिंगमधील सर्व व्यक्तींची मला ते तपासण्याची परवानगी आहे. ऑडिओचे मजकुरात रूपांतर करण्यासाठी तो Gnani च्या स्पीच सेवेकडे पाठवला जातो हे मला समजले आहे.',
   skipAudio: 'आवाजाची तपासणी वगळा (जलद)',
   analyse: 'तपासा',
@@ -313,6 +337,16 @@ const mr: Dict = {
   evidence: 'पुरावा',
   minor: 'किरकोळ चिन्हे',
   minorNote: 'ही एकटी धोक्याची पातळी वाढवण्यासाठी पुरेशी नाहीत.',
+  unreliable: 'विश्वासार्हपणे तपासता आले नाही',
+  unreliablePlain: 'ट्रान्सक्रिप्ट तुम्ही निवडलेल्या भाषेसारखे दिसत नाही, त्यामुळे "फसवणुकीची चिन्हे आढळली नाहीत" यावर विश्वास ठेवता येत नाही.',
+  unreliableAdvice: [
+    'ही तपासणी हटवा आणि योग्य भाषा निवडून रेकॉर्डिंग पुन्हा अपलोड करा, किंवा "खात्री नाही" निवडा.',
+    'कॉल संशयास्पद वाटला असेल तर तो संशयास्पदच माना: कोणताही कोड सांगू नका आणि बँकेच्या अधिकृत क्रमांकावर स्वतः कॉल करा.',
+  ],
+  languageWarning: {
+    not_english: 'हे ट्रान्सक्रिप्ट इंग्रजीसारखे दिसत नाही. रेकॉर्डिंग दुसऱ्या भाषेत असल्यास फसवणुकीच्या तपासणीत काही सुटू शकते.',
+    not_devanagari: 'तुम्ही निवडलेल्या भाषेसाठी अपेक्षित असलेल्या देवनागरी लिपीत हे ट्रान्सक्रिप्ट नाही. फसवणुकीच्या तपासणीत काही सुटू शकते.',
+  },
   noEvidence: 'कोणतीही चिन्हे आढळली नाहीत.',
   transcript: 'ट्रान्सक्रिप्ट',
   transcriptHint: 'हायलाइट केलेल्या शब्दसमूहावर टॅप करा, तो का चिन्हांकित केला ते कळेल.',
