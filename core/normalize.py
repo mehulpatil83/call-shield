@@ -72,11 +72,12 @@ def lev(a: str, b: str) -> int:
 
 
 def tok_match(a: str, b: str) -> bool:
-    """Exact for short tokens; for longer ones ~80% similar AND the same first letter (speech-to-text spells
-    words inconsistently, but "kabhi" (never) must not match "abhi" (now))."""
+    """Exact for tokens of 5 characters or fewer; for longer ones ~80% similar AND the same first letter (speech-to-text
+    spells words inconsistently, but "kabhi" (never) must not match "abhi" (now), and the Marathi "आत्ता" (now)
+    must not match "आत्ताच" (right now, a pressure phrase))."""
     if a == b:
         return True
-    if min(len(a), len(b)) <= 4 or a[0] != b[0]:
+    if min(len(a), len(b)) <= 5 or a[0] != b[0]:
         return False
     return 1 - lev(a, b) / max(len(a), len(b)) >= 0.8
 

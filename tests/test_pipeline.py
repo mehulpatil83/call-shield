@@ -70,7 +70,7 @@ def test_unknown_language(tmp_path):
 
 
 def test_authenticity_bands():
-    assert label_from_scores([-3.0] * 5).label.startswith("Consistent")
+    assert label_from_scores([-3.0] * 5).label.startswith("No sign")
     assert label_from_scores([-8.0] * 5).label.startswith("Synthetic")
     assert label_from_scores([-5.8] * 5).status == "inconclusive"
     assert label_from_scores([-3.0] * 2).status == "inconclusive"      # too little speech

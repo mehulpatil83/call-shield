@@ -16,6 +16,7 @@ LIMITATIONS = [
     "Speakers are not separated, so the report cannot tell who said what (a caller or the person being called).",
     "The audio check uses a small pretrained model that is weak on fakes it has not seen (about 44% error on a "
     "published real-world test set). Its score is uncertain evidence, never proof either way.",
+    "The voice check can miss modern AI-generated voices, so 'no sign found' does not mean the voice is human.",
     "A real person can run a scam, and a synthetic voice can say something harmless. The two findings are independent.",
     "Audio was sent to Gnani's service for transcription. Only analyse recordings with the speakers' consent.",
 ]
@@ -41,8 +42,8 @@ ADVICE = {
 }
 DIGIT_NOTE = ("Spoken number sequences are shown for context only and do not change the risk level. "
               "Reading a code aloud to a stranger is a warning sign.")
-AUTH_NOTE = ("This check only looks at how the voice sounds. It cannot show who a caller really is, and it does not "
-             "reliably detect modern cloned voices.")
+AUTH_NOTE = ("This check only looks at how the voice sounds. It cannot show who a caller really is. Modern "
+             "AI-generated (text-to-speech) and cloned voices can easily pass it.")
 
 
 def build_report(name: str, lang: str, variants: list[Variant] | None, per_variant: list[RuleResult],

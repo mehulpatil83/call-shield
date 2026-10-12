@@ -64,3 +64,13 @@ def test_empty_text():
 def test_kabhi_is_not_urgency():
     r = analyse_text("bank kabhi phone par OTP nahi maangta")
     assert not any(h.category == "urgency" for h in r.hits)
+
+
+def test_marathi_now_is_not_urgency_but_rightnow_is():
+    assert not any(h.category == "urgency" for h in analyse_text("ठीक आहे आत्ता काळजी करू नका").hits)
+    assert any(h.category == "urgency" for h in analyse_text("तुम्ही आत्ताच पडताळणी करा").hits)
+
+
+def test_clinic_conversation_has_no_indicators_at_all():
+    r = analyse_text(BENIGN["mr_clinic"])
+    assert r.level == "low" and r.hits == []

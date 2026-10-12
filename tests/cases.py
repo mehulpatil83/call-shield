@@ -16,6 +16,7 @@ BENIGN = {
     "mr_benign": "नमस्कार ही तुमच्या बँकेकडून एक आठवण आहे कृपया तुमचा ओटीपी पिन किंवा पासवर्ड कोणालाही सांगू नका बँक कधीही फोनवर ओटीपी विचारत नाही असा कोणताही फोन आला तर तो कट करा आणि कार्डच्या मागे दिलेल्या क्रमांकावर कॉल करा",
     "hi_genuine_alert": "Namaste sir, main aapke bank ke fraud monitoring desk se bol rahi hoon. Aapke card se chaar hazaar paanch sau rupaye ka transaction hua hai, kya yeh aapne kiya? Nahi, maine toh nahi kiya. Theek hai sir, hum card abhi block kar dete hain. Main aapse koi OTP ya PIN nahi maangungi. Naya card teen din mein aapke ghar aa jayega.",
     "mr_son_warns": "आई मी बोलतोय आत्ताच बँकेचा मेसेज आला का हो ओटीपी आला आहे कोणीतरी फोन करून तो विचारत होता आई तो कोणालाही सांगू नकोस बँक कधीच ओटीपी विचारत नाही ठीक आहे मी फोन कट केला",
+    "mr_clinic": "डॉक्टर मला खूप थकवा जाणवतो आणि कधी कधी डोकेदुखी होते ठीक आहे आत्ता काळजी करू नका हा साधारण त्रास आहे रक्ताची तपासणी करू या रिपोर्ट आल्यावर पुढे काय करायचं ते सांगतो धन्यवाद डॉक्टर",
     "small_talk": "Hello, how are you? I wanted to ask whether you are free for dinner on Sunday. Let me know and I will book a table for four people.",
 }
 HARD = {

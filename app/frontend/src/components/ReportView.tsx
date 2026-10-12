@@ -19,6 +19,7 @@ export default function ReportView({ detail, t, onDelete, onBack }: Props) {
   const { conversation: conv, authenticity: auth } = report
   const level = conv.level
   const shownHits = conv.hits
+  const minorOnly = level === 'low' && shownHits.some((h) => h.kind !== 'warning')
 
   return (
     <article className="report">
@@ -43,7 +44,8 @@ export default function ReportView({ detail, t, onDelete, onBack }: Props) {
         <section className="card" aria-labelledby="conv-title">
           <h3 id="conv-title">1. {t.conversation}</h3>
           <p><span className={`badge ${level}`} data-testid="level-badge">{t.levels[level]}</span></p>
-          <h4>{t.evidence}</h4>
+          <h4>{minorOnly ? t.minor : t.evidence}</h4>
+          {minorOnly && <p><small>{t.minorNote}</small></p>}
           {shownHits.length === 0 ? <p>{t.noEvidence}</p> : (
             <ul className="evidence">
               {shownHits.map((h, i) => {

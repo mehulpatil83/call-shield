@@ -82,6 +82,19 @@ describe('ReportView', () => {
   })
 })
 
+describe('low-risk report', () => {
+  it('calls a lone weak signal a minor signal, not evidence', () => {
+    const low: AnalysisDetail = {
+      ...detail, level: 'low',
+      report: { ...detail.report!, conversation: { ...detail.report!.conversation, level: 'low' } },
+    }
+    render(<ReportView detail={low} t={STRINGS.en} onDelete={() => {}} onBack={() => {}} />)
+    expect(screen.getByRole('heading', { name: STRINGS.en.minor })).toBeInTheDocument()
+    expect(screen.getByText(STRINGS.en.minorNote)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: STRINGS.en.evidence })).not.toBeInTheDocument()
+  })
+})
+
 describe('HistoryList', () => {
   it('shows level badges, in-progress steps and errors', () => {
     const base = { created: '2026-10-10T10:00:00', language: 'en', est_rupees: null, auth_label: null, error: null }

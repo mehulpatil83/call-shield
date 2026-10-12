@@ -100,7 +100,7 @@ def label_from_scores(scores: list[float]) -> AuthResult:
                           n_windows=len(scores), window_scores=[round(s, 2) for s in scores])
     med, q25, q75 = (float(np.percentile(scores, p)) for p in (50, 25, 75))
     if med >= REAL_AT_LEAST:
-        label, status, code = "Consistent with natural speech (provisional)", "ok", "natural"
+        label, status, code = "No sign of synthetic speech found (weak check)", "ok", "natural"
     elif med <= SYNTH_AT_MOST:
         label, status, code = "Synthetic-sounding (provisional)", "ok", "synthetic"
     else:
