@@ -10,7 +10,9 @@ import sys
 from pathlib import Path
 
 from . import config
-from .audio_io import duration_seconds
+from .audio_io import duration_seconds, sha256_file
+from .conversation import (SpeakerPart, channels_look_separate, parts_from_segments, read_channels, speaker_audio,
+                           write_wav)
 from .authenticity import AuthenticityScorer, AuthResult
 from .langcheck import check_language
 from .gnani_client import GnaniTranscriber, TranscriptionError, Variant
@@ -34,10 +36,83 @@ def analyse_transcripts(name: str, lang: str, variants: list[Variant] | None, te
     return report, render_html(report, hits_by_t)
 
 
+def analyse_conversation(path: Path, lang: str, transcriber: GnaniTranscriber, scorer: AuthenticityScorer | None,
+                         mode: str = "auto", on_status=None, display_name: str | None = None, work_dir: Path | None = None):
+    """Two-person call: separate the speakers (stereo channels or Gnani diarization), then judge each one."""
+    from .config import RUPEES_PER_MIN
+    from .rules import RuleResult, analyse_text, score_hits, summarise
+
+    say = on_status or (lambda step: None)
+    work = Path(work_dir or transcriber.cache_dir.parent / "speakers")
+    sha = sha256_file(path)[:12]
+    say("transcribing")
+    chans = read_channels(path) if mode in ("auto", "channels") else None
+    by_channels = bool(chans) and (mode == "channels" or channels_look_separate(chans))
+    parts: list[SpeakerPart] = []
+    cost, note = 0.0, None
+    if by_channels:
+        for i, ch in enumerate(chans[:2]):
+            wav = write_wav(work / f"{sha}-ch{i + 1}.wav", ch)
+            v = transcriber.transcribe_code(wav, lang)
+            cost += 0 if v.cached else v.audio_seconds / 60 * RUPEES_PER_MIN
+            parts.append(SpeakerPart(f"Speaker {i + 1}", v.text, [(0.0, round(len(ch) / 16000, 2))], wav))
+        note = "Speakers were separated using the two stereo channels."
+    else:
+        v = transcriber.transcribe_conversation(path, lang)
+        cost += 0 if v.cached else v.audio_seconds / 60 * RUPEES_PER_MIN
+        parts = parts_from_segments(v.segments)
+        if not parts:
+            parts = [SpeakerPart("Speaker 1", v.text, [])]
+        if len(parts) == 1:
+            note = "Only one speaker was detected, so this is the same as a normal analysis."
+        else:
+            note = "Speakers were separated by Gnani's speaker labelling (diarization); it can mix up voices."
+    say("analysing")
+    results = [analyse_text(p.text, source=p.label) for p in parts]
+    hits = [h for r in results for h in r.hits]
+    level, score = score_hits(hits)
+    ranks = {"low": 0, "elevated": 1, "high": 2}
+    worst = max(range(len(parts)), key=lambda i: (ranks[results[i].level], results[i].score)) if parts else 0
+    overall = RuleResult(level, score, hits, [d for r in results for d in r.digit_runs], summarise(level, hits))
+    say("checking_audio")
+    auths = []
+    for p in parts:
+        auth = None
+        if scorer:
+            wav = p.wav
+            if wav is None and p.spans:
+                audio = speaker_audio(path, p.spans)
+                wav = write_wav(work / f"{sha}-{p.label.replace(' ', '')}.wav", audio) if len(audio) >= 16000 else None
+            auth = scorer.score(wav) if wav else None
+        auths.append(auth)
+    texts = [p.text for p in parts]
+    report = build_report(display_name or path.name, lang, None, results, overall, None, round(duration_seconds(path), 1),
+                          texts, [p.label for p in parts])
+    report["meta"]["est_cost_rupees"] = round(cost, 2)
+    report["meta"]["conversation_mode"] = "channels" if by_channels else "diarization"
+    who = parts[worst].label if overall.level != "low" and len(parts) > 1 else None
+    report["speakers"] = [{
+        "label": p.label, "level": r.level if r.hits or p.text else "none", "score": r.score, "seconds": p.seconds,
+        "quotes": [h.quote for h in r.hits if h.kind != "warning"], "categories": sorted({h.category for h in r.hits if h.kind != "warning"}),
+        "authenticity": a.to_dict() if a else None,
+    } for p, r, a in zip(parts, results, auths)]
+    report["conversation"]["who"] = who
+    report["conversation"]["who_text"] = (f"The warning signs come from {who}." if who else
+                                          "No speaker stood out as suspicious." if len(parts) > 1 else (note or ""))
+    report["speaker_note"] = note
+    if who:
+        report["plain_summary"] += f" {report['conversation']['who_text']}"
+    warnings = [check_language(t, lang) for t in texts]
+    report["language_warning"] = warnings[0] if warnings and all(warnings) else None
+    return report, render_html(report, [r.hits for r in results])
+
+
 def analyse_file(path: Path, lang: str, transcriber: GnaniTranscriber, scorer: AuthenticityScorer | None,
-                 on_status=None, display_name: str | None = None):
+                 on_status=None, display_name: str | None = None, conversation: str | None = None):
     """Shared by the command line and the web app. on_status(step) is called with
     'transcribing', 'analysing', 'checking_audio' so a UI can show progress."""
+    if conversation:
+        return analyse_conversation(path, lang, transcriber, scorer, conversation, on_status, display_name)
     say = on_status or (lambda step: None)
     say("transcribing")
     variants = [v for v in transcriber.transcribe(path, lang) if v.text]
@@ -61,6 +136,8 @@ def main(argv=None) -> int:
     ap.add_argument("--text", help="analyse a transcript text file instead of audio (no Gnani, no audio check)")
     ap.add_argument("--no-auth", action="store_true", help="skip the audio authenticity check")
     ap.add_argument("--batch", action="store_true", help="use Gnani batch STT with bias words (slower)")
+    ap.add_argument("--conversation", nargs="?", const="auto", choices=["auto", "channels", "diarization"],
+                    help="two-person call: separate the speakers (stereo channels or Gnani diarization) and judge each")
     ap.add_argument("--out", default=str(config.REPORT_DIR), help="output folder")
     a = ap.parse_args(argv)
     src = Path(a.text or a.audio or "")
@@ -76,7 +153,7 @@ def main(argv=None) -> int:
             report, page = analyse_transcripts(src.name, lang, None, [src.read_text(encoding="utf-8")], None, None)
         else:
             report, page = analyse_file(src, lang, GnaniTranscriber(batch=a.batch, bias=a.batch),
-                                        None if a.no_auth else AuthenticityScorer())
+                                        None if a.no_auth else AuthenticityScorer(), conversation=a.conversation)
     except TranscriptionError as e:
         print(f"Transcription failed: {e}")
         return 2

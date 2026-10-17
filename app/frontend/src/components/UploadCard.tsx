@@ -9,7 +9,7 @@ interface Props {
   maxMb: number
   keyPresent: boolean
   busy: boolean
-  onSubmit: (file: File, language: SpeechLang, consent: boolean, skipAudio: boolean) => void
+  onSubmit: (file: File, language: SpeechLang, consent: boolean, skipAudio: boolean, conversation: boolean) => void
 }
 
 export default function UploadCard({ t, maxMb, keyPresent, busy, onSubmit }: Props) {
@@ -17,6 +17,7 @@ export default function UploadCard({ t, maxMb, keyPresent, busy, onSubmit }: Pro
   const [language, setLanguage] = useState<SpeechLang>('auto')
   const [consent, setConsent] = useState(false)
   const [skipAudio, setSkipAudio] = useState(false)
+  const [conversation, setConversation] = useState(false)
   const [dragging, setDragging] = useState(false)
   const input = useRef<HTMLInputElement>(null)
 
@@ -67,6 +68,11 @@ export default function UploadCard({ t, maxMb, keyPresent, busy, onSubmit }: Pro
         <span>{t.consent}</span>
       </label>
       <label className="check">
+        <input type="checkbox" checked={conversation && language !== 'auto'} disabled={language === 'auto'}
+               onChange={(e) => setConversation(e.target.checked)} />
+        <span>{t.speakers.checkbox}<br /><small className="mut">{t.speakers.hint}</small></span>
+      </label>
+      <label className="check">
         <input type="checkbox" checked={skipAudio} onChange={(e) => setSkipAudio(e.target.checked)} />
         <span>{t.skipAudio}</span>
       </label>
@@ -75,7 +81,7 @@ export default function UploadCard({ t, maxMb, keyPresent, busy, onSubmit }: Pro
         type="button"
         className="button primary"
         disabled={!ready}
-        onClick={() => file && onSubmit(file, language, consent, skipAudio)}
+        onClick={() => file && onSubmit(file, language, consent, skipAudio, conversation && language !== 'auto')}
       >
         {busy ? t.working : t.analyse}
       </button>

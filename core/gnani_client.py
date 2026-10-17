@@ -102,8 +102,29 @@ class GnaniTranscriber:
             raise TranscriptionError(f"No transcript produced ({errs})")
         return variants
 
-    def _one(self, path: Path, audio_hash: str, audio_s: float, code: str, mode: str) -> Variant:
-        opts = {"bias": bool(self.bias and mode == "batch")}
+    def transcribe_code(self, path: Path, lang: str) -> Variant:
+        """One transcript using the single language code that suits `lang` (REST up to 60 s, batch above)."""
+        code = config.CONVERSATION_CODE.get(lang)
+        if not code:
+            raise TranscriptionError("Speaker separation needs a specific language, not 'not sure'.")
+        audio_s = duration_seconds(path)
+        mode = "batch" if (self.batch or audio_s > config.REST_MAX_SECONDS) else "rest"
+        return self._one(path, sha256_file(path), audio_s, code, mode)
+
+    def transcribe_conversation(self, path: Path, lang: str, speakers: int = 2) -> Variant:
+        """One diarized batch transcript (speaker labels and timestamps per segment). A single language code is used,
+        because speaker labels from two separate transcripts cannot be matched up reliably."""
+        code = config.CONVERSATION_CODE.get(lang)
+        if not code:
+            raise TranscriptionError("Speaker separation needs a specific language (English, Hinglish, Marathi or Hindi), not 'not sure'.")
+        v = self._one(path, sha256_file(path), duration_seconds(path), code, "batch", diar=True, speakers=speakers)
+        if not v.text:
+            raise TranscriptionError(f"No transcript produced ({v.error or 'empty transcript'})")
+        return v
+
+    def _one(self, path: Path, audio_hash: str, audio_s: float, code: str, mode: str,
+             diar: bool = False, speakers: int = 2) -> Variant:
+        opts = {"bias": bool(self.bias and mode == "batch"), "diar": diar, "speakers": speakers if diar else 0}
         key = hashlib.sha256(json.dumps([audio_hash, code, mode, opts], sort_keys=True).encode()).hexdigest()[:32]
         cache_file = self.cache_dir / f"{key}.json"
         if cache_file.exists():
@@ -116,6 +137,8 @@ class GnaniTranscriber:
                 text, segs, model = res.get("transcript", ""), [], res.get("model")
             else:
                 kw = {"bias_words": config.BIAS_WORDS, "bias_score": 1.0} if opts["bias"] else {}
+                if diar:
+                    kw.update(diarization=True, speakers=speakers)
                 res = self._batch_client().transcribe(str(path), language_code=code, progress=False,
                                                       raise_on_failure=False, timeout=self.batch_timeout, **kw)
                 f = res[0]

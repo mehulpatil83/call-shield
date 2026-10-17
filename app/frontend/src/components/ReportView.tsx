@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { reportHtmlUrl } from '../api'
 import { splitTranscript } from '../highlight'
-import { categoryText, type Dict } from '../i18n'
+import { categoryText, speakerName, type Dict } from '../i18n'
 import type { AnalysisDetail, Hit } from '../types'
 import ScoreChart from './ScoreChart'
 
@@ -38,6 +38,7 @@ export default function ReportView({ detail, t, onDelete, onBack }: Props) {
 
       {warning && <p className="notice warn" role="alert" data-testid="language-warning">{t.languageWarning[warning]}</p>}
       <p className="plain" data-testid="plain-summary">{unreliable ? t.unreliablePlain : t.plain[level]}</p>
+      {conv.who && <p className="plain" data-testid="who">{t.speakers.who(speakerName(t, conv.who))}</p>}
       <section className="card advice" aria-labelledby="todo-title">
         <h3 id="todo-title">{t.whatToDo}</h3>
         <ul>{(unreliable ? t.unreliableAdvice : t.advice[level]).map((a) => <li key={a}>{a}</li>)}</ul>
@@ -74,8 +75,30 @@ export default function ReportView({ detail, t, onDelete, onBack }: Props) {
         </section>
 
         <section className="card" aria-labelledby="auth-title">
-          <h3 id="auth-title">2. {t.authenticity}</h3>
-          {auth === null ? <p>–</p> : (
+          <h3 id="auth-title">2. {report.speakers ? t.speakers.title : t.authenticity}</h3>
+          {report.speakers ? (
+            <>
+              <ul className="speakers">
+                {report.speakers.map((sp) => (
+                  <li key={sp.label} data-testid="speaker">
+                    <div className="row">
+                      <strong>{speakerName(t, sp.label)}</strong>
+                      <span className={`badge ${sp.level === 'none' ? 'neutral' : sp.level}`}>{sp.level === 'none' ? '–' : t.levels[sp.level]}</span>
+                    </div>
+                    <p className="mut"><small>{Math.round(sp.seconds)}s · {t.speakers.voice}: {sp.authenticity ? t.auth[(sp.authenticity.code || 'unavailable') as keyof Dict['auth']] : '–'}</small></p>
+                    {sp.quotes.length === 0 ? <p><small>{t.speakers.noSigns}</small></p> : (
+                      <ul className="evidence">
+                        {sp.quotes.slice(0, 3).map((q, i) => <li key={i}><strong>{categoryText(t, sp.categories[Math.min(i, sp.categories.length - 1)] ?? '').label}</strong><q>{q}</q></li>)}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {report.speaker_note && <p><small>{report.meta.conversation_mode === 'channels' ? t.speakers.noteChannels
+                : report.speakers.length === 1 ? t.speakers.noteSingle : t.speakers.noteDiarization}</small></p>}
+              <p><small>{t.authNote}</small></p>
+            </>
+          ) : auth === null ? <p>–</p> : (
             <>
               <p className="big">{t.auth[(auth.code || 'unavailable') as keyof Dict['auth']]}</p>
               {auth.median !== null && <p>{t.medianLine(auth.median, auth.q25 ?? auth.median, auth.q75 ?? auth.median, auth.n_windows)}</p>}
@@ -98,7 +121,7 @@ export default function ReportView({ detail, t, onDelete, onBack }: Props) {
         </p>
         {report.transcripts.map((tr, ti) => (
           <div key={ti}>
-            {report.transcripts.length > 1 && <h4>{tr.code}</h4>}
+            {report.transcripts.length > 1 && <h4>{speakerName(t, tr.code)}</h4>}
             <p className="tx" lang={tr.code.startsWith('mr') ? 'mr' : tr.code.startsWith('hi') ? 'hi' : 'en'}>
               {splitTranscript(tr.text, tr.rules.hits).map((seg, si) =>
                 seg.hit ? (

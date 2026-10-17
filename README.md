@@ -4,9 +4,10 @@ A privacy-conscious voice-scam and audio-authenticity checker for English, Hingl
 Great Indian AI Internship Challenge by Gnani.ai. Inspired by Panopticon (University of Peradeniya, AURORA AI
 IDEATHON 2026). This is an independent implementation: no Panopticon code is used.
 
-**Status:** Phase 0 (smoke tests), Phase 1 (core engine) and Phase 2 (local web app) are done. Evaluation on fresh recordings is next.
+**Status:** Phase 0 (smoke tests), Phase 1 (core engine) and Phase 2 (local web app) and live-call analysis are done. Evaluation on fresh recordings is next.
 
 ## What it does
+(also available live: the Live check tab analyses a call as it happens)
 1. Transcribes a consented recording with Gnani STT in English, Hinglish or Marathi (results cached on disk).
 2. Checks the conversation for social-engineering tactics with an explainable, rule-based engine: every alert
    quotes the transcript.

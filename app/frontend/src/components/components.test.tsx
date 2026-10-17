@@ -44,7 +44,7 @@ describe('UploadCard', () => {
     await user.click(screen.getByRole('checkbox', { name: new RegExp(STRINGS.en.consent.slice(0, 20)) }))
     expect(button).toBeEnabled()
     await user.click(button)
-    expect(onSubmit).toHaveBeenCalledWith(expect.any(File), 'auto', true, false)
+    expect(onSubmit).toHaveBeenCalledWith(expect.any(File), 'auto', true, false, false)
   })
   it('warns when the Gnani key is missing and when the file is too large', async () => {
     const user = userEvent.setup()
@@ -113,6 +113,45 @@ describe('wrong-language report', () => {
     render(<ReportView detail={risky} t={STRINGS.en} onDelete={() => {}} onBack={() => {}} />)
     expect(screen.getByTestId('level-badge')).toHaveTextContent(STRINGS.en.levels.high)
     expect(screen.getByTestId('language-warning')).toBeInTheDocument()
+  })
+})
+
+describe('conversation mode', () => {
+  it('sends the conversation flag, but not together with "Not sure"', async () => {
+    const onSubmit = vi.fn()
+    const user = userEvent.setup()
+    render(<UploadCard t={STRINGS.en} maxMb={25} keyPresent busy={false} onSubmit={onSubmit} />)
+    await user.upload(document.getElementById('audio-file') as HTMLInputElement, new File(['x'], 'c.wav', { type: 'audio/wav' }))
+    await user.click(screen.getByRole('checkbox', { name: new RegExp(STRINGS.en.consent.slice(0, 20)) }))
+    const box = screen.getByRole('checkbox', { name: new RegExp(STRINGS.en.speakers.checkbox.slice(0, 25)) })
+    expect(box).toBeDisabled()                                  // default language is "Not sure"
+    await user.selectOptions(screen.getByRole('combobox'), 'en')
+    await user.click(box)
+    await user.click(screen.getByRole('button', { name: STRINGS.en.analyse }))
+    expect(onSubmit).toHaveBeenCalledWith(expect.any(File), 'en', true, false, true)
+  })
+  it('shows each speaker with their own result in Marathi', () => {
+    const convo: AnalysisDetail = {
+      ...detail,
+      report: {
+        ...detail.report!,
+        meta: { ...detail.report!.meta, conversation_mode: 'diarization' },
+        speaker_note: 'x',
+        conversation: { ...detail.report!.conversation, who: 'Speaker 1' },
+        speakers: [
+          { label: 'Speaker 1', level: 'high', score: 8, seconds: 20, quotes: ['share the otp'], categories: ['otp_request'], authenticity: null },
+          { label: 'Speaker 2', level: 'low', score: 0, seconds: 18, quotes: [], categories: [], authenticity: null },
+        ],
+      },
+    }
+    render(<ReportView detail={convo} t={STRINGS.mr} onDelete={() => {}} onBack={() => {}} />)
+    const rows = screen.getAllByTestId('speaker')
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toHaveTextContent(`${STRINGS.mr.speakers.word} 1`)
+    expect(rows[0]).toHaveTextContent(STRINGS.mr.levels.high)
+    expect(rows[1]).toHaveTextContent(STRINGS.mr.speakers.noSigns)
+    expect(screen.getByTestId('who')).toHaveTextContent(`${STRINGS.mr.speakers.word} 1`)
+    expect(screen.getByText(STRINGS.mr.speakers.noteDiarization)).toBeInTheDocument()
   })
 })
 

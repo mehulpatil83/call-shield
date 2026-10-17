@@ -57,14 +57,14 @@ AUTH_NOTE = ("This check only looks at how the voice sounds. It cannot show who 
 
 def build_report(name: str, lang: str, variants: list[Variant] | None, per_variant: list[RuleResult],
                  merged: RuleResult, auth: AuthResult | None, audio_seconds: float | None,
-                 texts: list[str] | None = None) -> dict:
+                 texts: list[str] | None = None, labels: list[str] | None = None) -> dict:
     return {
         "meta": {"file": name, "language": lang, "created": datetime.now().isoformat(timespec="seconds"),
                  "engine_version": __version__, "audio_seconds": audio_seconds,
                  "est_cost_rupees": round(sum(v.audio_seconds / 60 * RUPEES_PER_MIN for v in (variants or []) if not v.cached), 2),
                  "stt_models": sorted({v.model for v in (variants or []) if v.model})},
         "transcripts": [
-            {**(v.to_dict() if v else {"code": "text", "mode": "text", "text": (texts or [""] * len(per_variant))[i]}),
+            {**(v.to_dict() if v else {"code": (labels or ["text"] * len(per_variant))[i], "mode": "text", "text": (texts or [""] * len(per_variant))[i]}),
              "rules": r.to_dict()}
             for i, (v, r) in enumerate(zip(variants or [None] * len(per_variant), per_variant))
         ],
@@ -142,6 +142,15 @@ def render_html(report: dict, hits_by_transcript: list[list]) -> str:
         f'<h3>Transcript ({esc(t.get("code", "text"))})</h3><p class="tx">{_highlight(t.get("text", ""), hits_by_transcript[i])}</p>'
         for i, t in enumerate(report["transcripts"]))
     lim = "".join(f"<li>{esc(x)}</li>" for x in report["limitations"])
+    speakers_html = ""
+    if report.get("speakers"):
+        rows = "".join(
+            f'<tr><td>{esc(sp["label"])}</td><td><span class="badge {esc("neutral" if sp["level"] == "none" else sp["level"])}">{esc(LEVEL_TEXT.get(sp["level"], sp["level"]))}</span></td>'
+            f'<td>{esc(str(sp["seconds"]))} s</td><td>{esc((sp.get("authenticity") or {}).get("label", "-"))}</td>'
+            f'<td>{esc("; ".join(sp["quotes"][:3]) or "-")}</td></tr>' for sp in report["speakers"])
+        speakers_html = (f'<section class="card" style="margin-top:16px"><h2>Who said what</h2>'
+                         f'<p>{esc(report["conversation"].get("who_text", ""))}</p>'
+                         f'<table><tr><th>Speaker</th><th>Conversation</th><th>Speech</th><th>Voice check</th><th>Evidence</th></tr>{rows}</table></section>')
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>call-shield report: {esc(meta["file"])}</title><style>
 :root{{--bg:#fff;--fg:#1b1b1f;--card:#f4f5f8;--mut:#5f6368}}
@@ -157,7 +166,7 @@ body{{margin:0;padding:20px;background:var(--bg);color:var(--fg);font:16px/1.5 s
 mark{{border-radius:4px;padding:0 2px;color:inherit}} mark.req{{background:#ffcdd2}} mark.pre{{background:#ffe0b2}}
 mark.ctx{{background:#d7ccc8}} mark.warn{{background:#c8e6c9}}
 @media (prefers-color-scheme:dark){{mark.req{{background:#6d2a2a}}mark.pre{{background:#6b4a1e}}mark.ctx{{background:#4e403b}}mark.warn{{background:#27472b}}}}
-.advice{{border-left:6px solid #ef6c00;margin:12px 0}} .tx{{white-space:pre-wrap;word-break:break-word}} .bars{{width:100%;max-width:300px}}
+.advice{{border-left:6px solid #ef6c00;margin:12px 0}} table{{border-collapse:collapse;width:100%}} td,th{{text-align:left;padding:6px;border-bottom:1px solid #8884;vertical-align:top}} .tx{{white-space:pre-wrap;word-break:break-word}} .bars{{width:100%;max-width:300px}}
 </style></head><body>
 <h1>call-shield report</h1>
 <p class="mut">File {esc(meta["file"])} · language {esc(meta["language"])} · {esc(meta["created"])} · engine {esc(meta["engine_version"])}</p>
@@ -168,7 +177,7 @@ mark.ctx{{background:#d7ccc8}} mark.warn{{background:#c8e6c9}}
 <section class="card"><h2>1. Conversation</h2><p><span class="badge {esc(badge_class)}">{esc(badge_label)}</span></p>
 <p>{esc(conv["summary"])}</p><ul>{ev}</ul>{("<h3>Spoken number sequences</h3><p><small>" + esc(conv.get("digit_note", "")) + "</small></p><ul>" + digits + "</ul>") if digits else ""}</section>
 <section class="card"><h2>2. Audio authenticity</h2>{auth_html}</section></div>
-<section class="card" style="margin-top:16px"><h2>Transcript with evidence</h2>
+{speakers_html}<section class="card" style="margin-top:16px"><h2>Transcript with evidence</h2>
 <p class="mut"><mark class="req">request</mark> <mark class="pre">pressure</mark> <mark class="ctx">claim or pretext</mark> <mark class="warn">warning wording</mark> (hover for the reason)</p>{blocks}</section>
 <section class="card" style="margin-top:16px"><h2>Limitations</h2><ul>{lim}</ul></section>
 </body></html>"""

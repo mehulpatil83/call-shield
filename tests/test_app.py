@@ -137,3 +137,21 @@ def test_auto_language_is_accepted(tmp_path):
     r = upload(c, language="auto")
     assert r.status_code == 202
     assert wait_done(c, r.json()["id"])["status"] == "done"
+
+
+def test_cross_site_requests_are_refused(tmp_path):
+    c, _ = make_client(tmp_path)
+    evil = {"Origin": "https://evil.example"}
+    r = c.post("/api/analyses", files={"file": ("en_call.wav", wav_bytes(), "audio/wav")},
+               data={"language": "en", "consent": "true"}, headers=evil)
+    assert r.status_code == 403
+    assert c.delete("/api/analyses", headers=evil).status_code == 403
+    assert c.get("/api/analyses", headers=evil).status_code == 200          # reading is not the risk; writing and cost are
+    ok = c.post("/api/analyses", files={"file": ("en_call.wav", wav_bytes(), "audio/wav")},
+                data={"language": "en", "consent": "true"}, headers={"Origin": "http://127.0.0.1:8000"})
+    assert ok.status_code == 202
+
+
+def test_unknown_host_header_is_refused(tmp_path):
+    c, _ = make_client(tmp_path)
+    assert c.get("/api/health", headers={"Host": "attacker.example"}).status_code == 400

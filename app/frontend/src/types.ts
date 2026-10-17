@@ -36,8 +36,17 @@ export interface Authenticity {
   plain_note: string
   model: string
 }
+export interface SpeakerSummary {
+  label: string
+  level: Level | 'none'
+  score: number
+  seconds: number
+  quotes: string[]
+  categories: string[]
+  authenticity: Authenticity | null
+}
 export interface Report {
-  meta: { file: string; language: string; created: string; audio_seconds: number | null; est_cost_rupees: number; stt_models: string[] }
+  meta: { file: string; language: string; created: string; audio_seconds: number | null; est_cost_rupees: number; stt_models: string[]; conversation_mode?: 'channels' | 'diarization' }
   plain_summary: string
   advice: string[]
   transcripts: TranscriptEntry[]
@@ -49,7 +58,11 @@ export interface Report {
     hits: Hit[]
     digit_runs: DigitRun[]
     digit_note: string
+    who?: string | null
+    who_text?: string
   }
+  speakers?: SpeakerSummary[]
+  speaker_note?: string | null
   authenticity: Authenticity | null
   limitations: string[]
   language_warning?: 'not_english' | 'not_devanagari' | null

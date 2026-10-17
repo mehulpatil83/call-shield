@@ -27,11 +27,12 @@ export const deleteAnalysis = (id: string) => call<{ deleted: string }>(`/api/an
 export const deleteAll = () => call<{ deleted: number }>('/api/analyses', { method: 'DELETE' })
 export const reportHtmlUrl = (id: string) => `/api/analyses/${id}/report.html?download=true`
 
-export function createAnalysis(file: File, language: SpeechLang, consent: boolean, skipAudioCheck: boolean) {
+export function createAnalysis(file: File, language: SpeechLang, consent: boolean, skipAudioCheck: boolean, conversation = false) {
   const form = new FormData()
   form.append('file', file)
   form.append('language', language)
   form.append('consent', String(consent))
   form.append('skip_audio_check', String(skipAudioCheck))
+  form.append('conversation', String(conversation))
   return call<{ id: string; status: string }>('/api/analyses', { method: 'POST', body: form })
 }

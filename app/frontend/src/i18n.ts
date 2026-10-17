@@ -1,7 +1,44 @@
 import type { Lang, Level, SpeechLang, Step } from './types'
 
 export interface CategoryText { label: string; explain: string }
+export interface LiveText {
+  title: string
+  intro: string
+  micHint: string
+  startMic: string
+  replay: string
+  stop: string
+  connecting: string
+  listening: string
+  stopping: string
+  meter: string
+  alertHigh: string
+  alertElevated: string
+  openReport: string
+  again: string
+  limitReached: (seconds: number) => string
+  tooShort: string
+  waiting: string
+  spotted: string
+  warningNote: string
+}
+export interface SpeakerText {
+  title: string
+  word: string
+  checkbox: string
+  hint: string
+  who: (label: string) => string
+  nobody: string
+  noSigns: string
+  voice: string
+  noteDiarization: string
+  noteChannels: string
+  noteSingle: string
+}
 export interface Dict {
+  speakers: SpeakerText
+  nav: { upload: string; live: string }
+  live: LiveText
   appName: string
   tagline: string
   privacy: string
@@ -63,6 +100,41 @@ export interface Dict {
 }
 
 const en: Dict = {
+  speakers: {
+    title: 'Who said what',
+    word: 'Speaker',
+    checkbox: 'This is a conversation between two people (separate the speakers)',
+    hint: 'Needs a specific language (not "Not sure") and takes longer. Works best when each person is on a separate stereo channel.',
+    who: (label) => `The warning signs come from ${label}.`,
+    nobody: 'No speaker stood out as suspicious.',
+    noSigns: 'No scam signs from this speaker.',
+    voice: 'Voice check',
+    noteDiarization: "Speakers were separated by Gnani's speaker labelling (diarization). It can mix up voices.",
+    noteChannels: 'Speakers were separated using the two stereo channels.',
+    noteSingle: 'Only one speaker was detected, so this is the same as a normal analysis.',
+  },
+  nav: { upload: 'Upload a recording', live: 'Live check' },
+  live: {
+    title: 'Live check',
+    intro: 'Listen to a call as it happens, or replay a recording as if it were live. The risk meter updates as words are recognised. Use this only with the permission of everyone on the call.',
+    micHint: 'Your browser will ask for permission to use the microphone. Open this page at http://127.0.0.1:8000 or localhost.',
+    startMic: 'Start listening (microphone)',
+    replay: 'Replay a recording as a live call',
+    stop: 'Stop and get the report',
+    connecting: 'Connecting…',
+    listening: 'Listening…',
+    stopping: 'Finishing and saving the report…',
+    meter: 'Risk so far',
+    alertHigh: 'Warning: this call shows signs of a scam. Do not share any code, PIN or password. Hang up and call your bank on its official number.',
+    alertElevated: 'Be careful: something sensitive is being asked for. Check who is really asking before you share anything.',
+    openReport: 'Open the full report',
+    again: 'Start another',
+    limitReached: (n) => `The ${n}-second limit was reached, so the check was stopped.`,
+    tooShort: 'The call was too short to analyse.',
+    waiting: 'Waiting for speech…',
+    spotted: 'Spotted so far',
+    warningNote: 'A speech-recognition stream reported a problem; the check continues.',
+  },
   appName: 'call-shield',
   tagline: 'Check a call recording for scam tactics and for signs of a synthetic voice.',
   privacy: 'Analysis runs on this computer. Recordings are kept only in the local data folder and you can delete them here at any time.',
@@ -174,6 +246,41 @@ const en: Dict = {
 
 // DRAFT translations written by an AI assistant: they need review by native Hindi and Marathi speakers.
 const hi: Dict = {
+  speakers: {
+    title: 'किसने क्या कहा',
+    word: 'वक्ता',
+    checkbox: 'यह दो लोगों की बातचीत है (वक्ताओं को अलग करें)',
+    hint: 'इसके लिए कोई खास भाषा चुननी होगी ("पक्का नहीं" नहीं) और इसमें ज़्यादा समय लगता है। जब हर व्यक्ति अलग स्टीरियो चैनल पर हो तो सबसे अच्छा चलता है।',
+    who: (label) => `ठगी के संकेत ${label} की ओर से आ रहे हैं।`,
+    nobody: 'कोई वक्ता संदिग्ध नहीं दिखा।',
+    noSigns: 'इस वक्ता की ओर से ठगी के कोई संकेत नहीं।',
+    voice: 'आवाज़ की जाँच',
+    noteDiarization: 'वक्ताओं को Gnani की वक्ता-पहचान (डायराइज़ेशन) से अलग किया गया। यह आवाज़ों को आपस में मिला सकती है।',
+    noteChannels: 'वक्ताओं को दो स्टीरियो चैनलों से अलग किया गया।',
+    noteSingle: 'सिर्फ़ एक वक्ता मिला, इसलिए यह सामान्य जाँच जैसा ही है।',
+  },
+  nav: { upload: 'रिकॉर्डिंग अपलोड करें', live: 'लाइव जाँच' },
+  live: {
+    title: 'लाइव जाँच',
+    intro: 'कॉल को होते समय सुनें, या किसी रिकॉर्डिंग को लाइव की तरह चलाएँ। शब्द पहचाने जाते ही जोखिम मीटर बदलता है। इसका उपयोग केवल कॉल में शामिल सभी लोगों की अनुमति से करें।',
+    micHint: 'आपका ब्राउज़र माइक्रोफ़ोन की अनुमति माँगेगा। यह पेज http://127.0.0.1:8000 या localhost पर खुला होना चाहिए।',
+    startMic: 'सुनना शुरू करें (माइक्रोफ़ोन)',
+    replay: 'रिकॉर्डिंग को लाइव कॉल की तरह चलाएँ',
+    stop: 'रोकें और रिपोर्ट पाएँ',
+    connecting: 'जुड़ रहा है…',
+    listening: 'सुन रहा है…',
+    stopping: 'पूरा करके रिपोर्ट सहेजी जा रही है…',
+    meter: 'अब तक का जोखिम',
+    alertHigh: 'चेतावनी: इस कॉल में ठगी के संकेत दिख रहे हैं। कोई कोड, पिन या पासवर्ड साझा न करें। कॉल काटें और अपने बैंक के आधिकारिक नंबर पर खुद कॉल करें।',
+    alertElevated: 'सावधान: कोई संवेदनशील जानकारी माँगी जा रही है। कुछ भी बताने से पहले जाँचें कि माँगने वाला कौन है।',
+    openReport: 'पूरी रिपोर्ट खोलें',
+    again: 'दूसरी जाँच शुरू करें',
+    limitReached: (n) => `${n} सेकंड की सीमा पूरी हो गई, इसलिए जाँच रोक दी गई।`,
+    tooShort: 'कॉल इतनी छोटी थी कि जाँच नहीं हो सकी।',
+    waiting: 'बोली का इंतज़ार…',
+    spotted: 'अब तक मिले संकेत',
+    warningNote: 'स्पीच पहचान स्ट्रीम में समस्या आई; जाँच जारी है।',
+  },
   appName: 'call-shield',
   tagline: 'किसी कॉल रिकॉर्डिंग में ठगी के तरीकों और नकली (सिंथेटिक) आवाज़ के संकेतों की जाँच करें।',
   privacy: 'विश्लेषण इसी कंप्यूटर पर चलता है। रिकॉर्डिंग सिर्फ़ स्थानीय डेटा फ़ोल्डर में रहती हैं और आप उन्हें यहीं से कभी भी हटा सकते हैं।',
@@ -284,6 +391,41 @@ const hi: Dict = {
 }
 
 const mr: Dict = {
+  speakers: {
+    title: 'कोण काय म्हणाले',
+    word: 'वक्ता',
+    checkbox: 'ही दोन व्यक्तींमधील संभाषण आहे (वक्ते वेगळे करा)',
+    hint: 'यासाठी विशिष्ट भाषा निवडावी लागते ("खात्री नाही" नाही) आणि जास्त वेळ लागतो. प्रत्येक व्यक्ती वेगळ्या स्टीरिओ चॅनेलवर असल्यास सर्वोत्तम चालते.',
+    who: (label) => `फसवणुकीची चिन्हे ${label} कडून येत आहेत.`,
+    nobody: 'कोणताही वक्ता संशयास्पद वाटला नाही.',
+    noSigns: 'या वक्त्याकडून फसवणुकीची कोणतीही चिन्हे नाहीत.',
+    voice: 'आवाजाची तपासणी',
+    noteDiarization: 'वक्ते Gnani च्या वक्ता-ओळखीने (डायरायझेशन) वेगळे केले. ती आवाजांची अदलाबदल करू शकते.',
+    noteChannels: 'वक्ते दोन स्टीरिओ चॅनेल वापरून वेगळे केले.',
+    noteSingle: 'फक्त एकच वक्ता आढळला, त्यामुळे हे सामान्य तपासणीसारखेच आहे.',
+  },
+  nav: { upload: 'रेकॉर्डिंग अपलोड करा', live: 'लाइव तपासणी' },
+  live: {
+    title: 'लाइव तपासणी',
+    intro: 'कॉल सुरू असताना ऐका, किंवा एखादे रेकॉर्डिंग लाइव असल्यासारखे चालवा. शब्द ओळखले जाताच धोक्याचे मीटर बदलते. हे फक्त कॉलवरील सर्वांच्या परवानगीनेच वापरा.',
+    micHint: 'तुमचा ब्राउझर मायक्रोफोनची परवानगी मागेल. हे पेज http://127.0.0.1:8000 किंवा localhost वर उघडलेले असावे.',
+    startMic: 'ऐकायला सुरुवात करा (मायक्रोफोन)',
+    replay: 'रेकॉर्डिंग लाइव कॉलसारखे चालवा',
+    stop: 'थांबवा आणि अहवाल मिळवा',
+    connecting: 'जोडले जात आहे…',
+    listening: 'ऐकत आहे…',
+    stopping: 'पूर्ण करून अहवाल जतन केला जात आहे…',
+    meter: 'आतापर्यंतचा धोका',
+    alertHigh: 'इशारा: या कॉलमध्ये फसवणुकीची चिन्हे दिसत आहेत. कोणताही कोड, पिन किंवा पासवर्ड सांगू नका. कॉल कट करा आणि बँकेच्या अधिकृत क्रमांकावर स्वतः कॉल करा.',
+    alertElevated: 'काळजी घ्या: कोणतीतरी संवेदनशील माहिती मागितली जात आहे. काहीही सांगण्यापूर्वी मागणारा खरोखर कोण आहे ते तपासा.',
+    openReport: 'संपूर्ण अहवाल उघडा',
+    again: 'दुसरी तपासणी सुरू करा',
+    limitReached: (n) => `${n} सेकंदांची मर्यादा गाठली, म्हणून तपासणी थांबवली.`,
+    tooShort: 'कॉल इतका छोटा होता की तपासणी करता आली नाही.',
+    waiting: 'बोलण्याची वाट पाहत आहे…',
+    spotted: 'आतापर्यंत आढळलेली चिन्हे',
+    warningNote: 'स्पीच ओळख प्रवाहात समस्या आली; तपासणी सुरू आहे.',
+  },
   appName: 'call-shield',
   tagline: 'कॉल रेकॉर्डिंगमध्ये फसवणुकीच्या पद्धती आणि कृत्रिम (सिंथेटिक) आवाजाची चिन्हे तपासा.',
   privacy: 'विश्लेषण याच संगणकावर होते. रेकॉर्डिंग फक्त स्थानिक डेटा फोल्डरमध्ये राहतात आणि तुम्ही त्या इथून कधीही हटवू शकता.',
@@ -398,4 +540,10 @@ export const LANG_NAMES: Record<Lang, string> = { en: 'English', hi: 'हिं�
 
 export function categoryText(t: Dict, category: string, fallbackExplain = ''): CategoryText {
   return t.categories[category] ?? { label: category.replace(/_/g, ' '), explain: fallbackExplain }
+}
+
+/** The server labels speakers "Speaker 1", "Speaker 2": show them in the interface language. */
+export function speakerName(t: Dict, label: string): string {
+  const m = /^Speaker (\d+)$/.exec(label)
+  return m ? `${t.speakers.word} ${m[1]}` : label
 }

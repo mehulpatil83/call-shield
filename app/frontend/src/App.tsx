@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as api from './api'
 import HistoryList from './components/HistoryList'
+import LivePanel from './components/LivePanel'
 import ProgressCard from './components/ProgressCard'
 import ReportView from './components/ReportView'
 import UploadCard from './components/UploadCard'
@@ -21,15 +22,25 @@ function useLang(): [Lang, (l: Lang) => void] {
   }]
 }
 
-function useHashId(): [string | null, (id: string | null) => void] {
-  const read = () => /^#\/a\/([a-f0-9]{12})$/.exec(window.location.hash)?.[1] ?? null
-  const [id, setId] = useState<string | null>(read)
+type Route = { name: 'home' } | { name: 'live' } | { name: 'analysis'; id: string }
+
+function readRoute(): Route {
+  const h = window.location.hash
+  if (h === '#/live') return { name: 'live' }
+  const id = /^#\/a\/([a-f0-9]{12})$/.exec(h)?.[1]
+  return id ? { name: 'analysis', id } : { name: 'home' }
+}
+
+function useRoute(): [Route, (r: Route) => void] {
+  const [route, setRoute] = useState<Route>(readRoute)
   useEffect(() => {
-    const on = () => setId(read())
+    const on = () => setRoute(readRoute())
     window.addEventListener('hashchange', on)
     return () => window.removeEventListener('hashchange', on)
   }, [])
-  return [id, (next) => { window.location.hash = next ? `#/a/${next}` : '' }]
+  return [route, (next) => {
+    window.location.hash = next.name === 'analysis' ? `#/a/${next.id}` : next.name === 'live' ? '#/live' : ''
+  }]
 }
 
 function AnalysisView({ id, lang, onBack }: { id: string; lang: Lang; onBack: () => void }) {
@@ -81,7 +92,9 @@ function AnalysisView({ id, lang, onBack }: { id: string; lang: Lang; onBack: ()
 export default function App() {
   const [lang, setLang] = useLang()
   const t = STRINGS[lang]
-  const [id, setId] = useHashId()
+  const [route, setRoute] = useRoute()
+  const id = route.name === 'analysis' ? route.id : null
+  const setId = (next: string | null) => setRoute(next ? { name: 'analysis', id: next } : { name: 'home' })
   const [health, setHealth] = useState<Health | null>(null)
   const [items, setItems] = useState<AnalysisSummary[]>([])
   const [busy, setBusy] = useState(false)
@@ -94,14 +107,14 @@ export default function App() {
   useEffect(() => {
     api.health().then(setHealth).catch((e) => setError(e instanceof Error ? e.message : String(e)))
   }, [])
-  useEffect(() => { if (!id) refresh() }, [id, refresh])
+  useEffect(() => { if (route.name === 'home') refresh() }, [route.name, refresh])
   useEffect(() => { document.documentElement.lang = lang }, [lang])
 
-  const submit = async (file: File, language: SpeechLang, consent: boolean, skip: boolean) => {
+  const submit = async (file: File, language: SpeechLang, consent: boolean, skip: boolean, conversation: boolean) => {
     setBusy(true)
     setError(null)
     try {
-      const r = await api.createAnalysis(file, language, consent, skip)
+      const r = await api.createAnalysis(file, language, consent, skip, conversation)
       setId(r.id)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -135,10 +148,18 @@ export default function App() {
           </select>
         </label>
       </header>
+      <nav className="tabs" aria-label="Main">
+        <button type="button" className={`tab${route.name !== 'live' ? ' active' : ''}`} aria-current={route.name !== 'live' ? 'page' : undefined}
+                onClick={() => setRoute({ name: 'home' })}>{t.nav.upload}</button>
+        <button type="button" className={`tab${route.name === 'live' ? ' active' : ''}`} aria-current={route.name === 'live' ? 'page' : undefined}
+                onClick={() => setRoute({ name: 'live' })}>{t.nav.live}</button>
+      </nav>
       <p className="notice">{t.privacy}</p>
       {error && <p className="notice warn" role="alert">{error}</p>}
 
-      {id ? (
+      {route.name === 'live' ? (
+        <LivePanel t={t} onOpenReport={(rid) => setId(rid)} />
+      ) : id ? (
         <AnalysisView id={id} lang={lang} onBack={() => setId(null)} />
       ) : (
         <>

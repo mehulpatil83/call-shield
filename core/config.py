@@ -16,3 +16,6 @@ RUPEES_PER_MIN = 0.47          # measured in Phase 0: Rs 9.88 for about 21 min
 # Words nudged by Gnani batch STT (`bias_words`); it improved scam-term spelling on the Phase 0 test clips.
 BIAS_WORDS = ["OTP", "KYC", "UPI", "PIN", "CVV", "Aadhaar", "account", "verify", "block", "freeze",
               "ओटीपी", "केवायसी", "यूपीआई", "आधार"]
+
+# Speaker separation uses ONE code per recording (Hinglish uses the Roman-script model, which did best in Phase 0)
+CONVERSATION_CODE = {"en": "en-IN", "hinglish": "en-IN", "mr": "mr-IN", "hi": "hi-IN"}
