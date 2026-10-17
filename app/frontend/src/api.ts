@@ -36,3 +36,13 @@ export function createAnalysis(file: File, language: SpeechLang, consent: boolea
   form.append('conversation', String(conversation))
   return call<{ id: string; status: string }>('/api/analyses', { method: 'POST', body: form })
 }
+
+export interface CallCreated { code: string; language: string; public_url: string | null; join_url: string | null; expires_in: number }
+export const callConfig = () => call<{ public_url: string | null }>('/api/calls/config')
+export function createCall(language: SpeechLang, consent: boolean, skipAudioCheck: boolean, publicUrl: string | null) {
+  return call<CallCreated>('/api/calls', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ language, consent, skip_audio_check: skipAudioCheck, public_url: publicUrl || null }),
+  })
+}

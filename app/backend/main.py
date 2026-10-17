@@ -13,7 +13,6 @@ from fastapi.staticfiles import StaticFiles
 from urllib.parse import urlparse
 
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from core import __version__, config
 import asyncio
@@ -30,6 +29,7 @@ from core.live import LIVE_MAX_SECONDS, SAMPLE_RATE, LiveSession
 from core.authenticity import AuthenticityScorer
 from core.gnani_client import GnaniTranscriber, TranscriptionError, load_api_key
 
+from .calls import LOCAL_HOSTS, CallManager, HostGate, add_call_routes, probe_cloudflared
 from .storage import ID_RE, Store
 
 log = logging.getLogger("call-shield")
@@ -40,9 +40,9 @@ FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 REPORT_CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'"
 UI_CSP = ("default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
           "connect-src 'self' ws://127.0.0.1:* ws://localhost:*; base-uri 'none'; form-action 'self'")
+PUBLIC_UI_CSP = ("default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
+                 "connect-src 'self' wss://{host}; base-uri 'none'; form-action 'none'")
 
-
-LOCAL_HOSTS = {"127.0.0.1", "localhost", "testserver"}
 
 
 def origin_ok(origin: str | None) -> bool:
@@ -64,12 +64,17 @@ class Headers(BaseHTTPMiddleware):
         if request.url.path.endswith("/report.html"):
             resp.headers["Content-Security-Policy"] = REPORT_CSP
         elif not request.url.path.startswith("/api/"):
-            resp.headers.setdefault("Content-Security-Policy", UI_CSP)
+            if request.scope.get("public"):               # the phone page, reached through the tunnel
+                resp.headers.setdefault("Content-Security-Policy", PUBLIC_UI_CSP.format(host=request.scope.get("hostname", "")))
+            else:
+                resp.headers.setdefault("Content-Security-Policy", UI_CSP)
+            resp.headers.setdefault("Permissions-Policy", "microphone=(self), camera=(), geolocation=()")
         return resp
 
 
 def create_app(data_dir: Path | None = None, transcriber_factory=None, scorer_factory=None,
-               serve_frontend: bool = True, max_upload_mb: int = 25, stream_factory=None) -> FastAPI:
+               serve_frontend: bool = True, max_upload_mb: int = 25, stream_factory=None,
+               public_url: str | None = None, tunnel_probe=probe_cloudflared) -> FastAPI:
     store = Store(Path(data_dir or config.ROOT / "data"))
     store.recover_interrupted()
     shared_scorer = AuthenticityScorer()          # loads the model once, on first use
@@ -94,7 +99,10 @@ def create_app(data_dir: Path | None = None, transcriber_factory=None, scorer_fa
     pool = ThreadPoolExecutor(max_workers=1)      # one analysis at a time: the CPU is small
     app = FastAPI(title="call-shield", version=__version__, docs_url="/api/docs", openapi_url="/api/openapi.json")
     app.add_middleware(Headers)
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=sorted(LOCAL_HOSTS))   # blocks DNS-rebinding tricks
+    public_hosts: set[str] = set()                # tunnel addresses the owner approved (phone page + speaker socket only)
+    app.add_middleware(HostGate, public_hosts=public_hosts)    # outermost: blocks DNS-rebinding tricks, limits the public surface
+    app.state.public_url = None
+    calls = CallManager()
 
     # ------------------------------------------------------------------ background job -----
     def run_job(id: str, skip_audio_check: bool, conversation: bool = False) -> None:
@@ -284,6 +292,18 @@ def create_app(data_dir: Path | None = None, transcriber_factory=None, scorer_fa
                 await ws.close()
             except Exception:
                 pass
+
+    # ------------------------------------------------------------------ call mode (phone speaker -> laptop receiver)
+    if public_url:
+        from .calls import parse_public_url
+        seeded = parse_public_url(public_url)
+        if not seeded:
+            raise ValueError("public_url must be an https tunnel address such as https://example.trycloudflare.com")
+        public_hosts.add(urlparse(seeded).hostname)
+        app.state.public_url = seeded
+    add_call_routes(app, manager=calls, languages=LANGUAGES, origin_ok=origin_ok, live_busy=live_busy, pool=pool,
+                    finish_live=finish_live, stream_factory=stream_factory, public_hosts=public_hosts,
+                    tunnel_probe=tunnel_probe)
 
     @app.exception_handler(404)
     async def not_found(request, exc):

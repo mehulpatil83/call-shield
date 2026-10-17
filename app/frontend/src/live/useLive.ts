@@ -1,16 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 import type { SpeechLang } from '../types'
 import { startMicrophone, startReplay } from './audio'
-import { initialLive, liveReducer, type LiveState, type ServerMessage } from './state'
-
-type Action = ServerMessage | { type: '_reset' } | { type: '_connecting' } | { type: '_stopping' }
-
-function reduce(state: LiveState, a: Action): LiveState {
-  if (a.type === '_reset') return initialLive
-  if (a.type === '_connecting') return { ...initialLive, status: 'connecting' }
-  if (a.type === '_stopping') return state.status === 'live' ? { ...state, status: 'stopping' } : state
-  return liveReducer(state, a)
-}
+import { initialLive, reduceLive, type ServerMessage } from './state'
 
 export function liveUrl(language: SpeechLang, skipAudio: boolean): string {
   const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -18,7 +9,7 @@ export function liveUrl(language: SpeechLang, skipAudio: boolean): string {
 }
 
 export function useLive(createSocket: (url: string) => WebSocket = (u) => new WebSocket(u)) {
-  const [state, dispatch] = useReducer(reduce, initialLive)
+  const [state, dispatch] = useReducer(reduceLive, initialLive)
   const socket = useRef<WebSocket | null>(null)
   const stopAudio = useRef<(() => void) | null>(null)
 

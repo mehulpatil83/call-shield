@@ -22,6 +22,45 @@ export interface LiveText {
   spotted: string
   warningNote: string
 }
+export interface CallText {
+  nav: string
+  title: string
+  intro: string
+  publicLabel: string
+  publicHint: string
+  noTunnel: string
+  consent: string
+  start: string
+  cancel: string
+  end: string
+  codeLabel: string
+  scan: string
+  joinAddress: string
+  waitingSpeaker: string
+  speakerJoined: string
+  listen: string
+  listenHint: string
+  expires: (minutes: number) => string
+  speakerTitle: string
+  speakerIntro: string
+  codeInput: string
+  codeInvalid: string
+  speakerConsent: string
+  join: string
+  connecting: string
+  connected: string
+  muted: string
+  mute: string
+  unmute: string
+  endCall: string
+  ended: string
+  joinAnother: string
+  micDenied: string
+  keepScreenOn: string
+  lostConnection: string
+  roleSpeaker: string
+  nothingShown: string
+}
 export interface SpeakerText {
   title: string
   word: string
@@ -37,8 +76,9 @@ export interface SpeakerText {
 }
 export interface Dict {
   speakers: SpeakerText
-  nav: { upload: string; live: string }
+  nav: { upload: string; live: string; call: string }
   live: LiveText
+  call: CallText
   appName: string
   tagline: string
   privacy: string
@@ -113,7 +153,46 @@ const en: Dict = {
     noteChannels: 'Speakers were separated using the two stereo channels.',
     noteSingle: 'Only one speaker was detected, so this is the same as a normal analysis.',
   },
-  nav: { upload: 'Upload a recording', live: 'Live check' },
+  nav: { upload: 'Upload a recording', live: 'Live check', call: 'Receive a call' },
+  call: {
+    nav: 'Receive a call',
+    title: 'Receive a call',
+    intro: 'Start a call, then scan the code or open the address on the phone that will be the Speaker. This computer is the Receiver: it listens to the call and shows the live check. Use only acted, fictional speech, never real personal, bank or ID details.',
+    publicLabel: 'Public address (from the tunnel window)',
+    publicHint: 'Start the tunnel first (tools\\start_demo.bat). The address looks like https://something.trycloudflare.com',
+    noTunnel: 'No tunnel address yet, so a phone cannot join. You can still test with a second browser tab on this computer.',
+    consent: 'I understand that the Speaker\'s voice is sent from their phone to this computer and then to Gnani for transcription, and that everyone on the call has agreed. Only acted, fictional speech is used.',
+    start: 'Start the call',
+    cancel: 'Cancel the call',
+    end: 'End the call and get the report',
+    codeLabel: 'Call code',
+    scan: 'On the phone: scan this code, or open the address below and type the code.',
+    joinAddress: 'Join address',
+    waitingSpeaker: 'Waiting for the Speaker to join…',
+    speakerJoined: 'The Speaker has joined and is confirming consent…',
+    listen: 'Listen to the call on this device',
+    listenHint: 'Off by default. Use headphones, or keep the phone in another room, otherwise the phone picks up this computer\'s sound and you get an echo.',
+    expires: (m) => `The code works once and for ${m} minutes.`,
+    speakerTitle: 'Join a call as Speaker',
+    speakerIntro: 'You are the Speaker. Your voice goes to the Receiver\'s computer, which checks the call for scam tactics. Nothing of that check is shown on this phone.',
+    codeInput: 'Call code (6 digits)',
+    codeInvalid: 'Enter the 6-digit code shown on the Receiver\'s screen.',
+    speakerConsent: 'I agree that my voice is sent to the Receiver\'s computer and to Gnani for speech-to-text and analysis. I will say only acted, fictional lines, never real personal, bank or ID details.',
+    join: 'Join the call',
+    connecting: 'Connecting…',
+    connected: 'Connected. You can speak now.',
+    muted: 'Muted',
+    mute: 'Mute',
+    unmute: 'Unmute',
+    endCall: 'End call',
+    ended: 'The call has ended.',
+    joinAnother: 'Join another call',
+    micDenied: 'The microphone is blocked. Allow it in the browser\'s site settings and try again.',
+    keepScreenOn: 'Keep this screen on during the call, or the phone stops sending your voice.',
+    lostConnection: 'The connection was lost.',
+    roleSpeaker: 'Speaker',
+    nothingShown: 'This phone shows no analysis.',
+  },
   live: {
     title: 'Live check',
     intro: 'Listen to a call as it happens, or replay a recording as if it were live. The risk meter updates as words are recognised. Use this only with the permission of everyone on the call.',
@@ -259,7 +338,46 @@ const hi: Dict = {
     noteChannels: 'वक्ताओं को दो स्टीरियो चैनलों से अलग किया गया।',
     noteSingle: 'सिर्फ़ एक वक्ता मिला, इसलिए यह सामान्य जाँच जैसा ही है।',
   },
-  nav: { upload: 'रिकॉर्डिंग अपलोड करें', live: 'लाइव जाँच' },
+  nav: { upload: 'रिकॉर्डिंग अपलोड करें', live: 'लाइव जाँच', call: 'कॉल रिसीव करें' },
+  call: {
+    nav: 'कॉल रिसीव करें',
+    title: 'कॉल रिसीव करें',
+    intro: 'कॉल शुरू करें, फिर जिस फ़ोन को स्पीकर बनना है उस पर कोड स्कैन करें या पता खोलें। यह कंप्यूटर रिसीवर है: यह कॉल सुनता है और लाइव जाँच दिखाता है। केवल अभिनय की हुई, काल्पनिक बातें बोलें, असली निजी, बैंक या पहचान की जानकारी कभी नहीं।',
+    publicLabel: 'सार्वजनिक पता (टनल वाली विंडो से)',
+    publicHint: 'पहले टनल शुरू करें (tools\\start_demo.bat)। पता कुछ ऐसा दिखता है: https://something.trycloudflare.com',
+    noTunnel: 'अभी टनल का पता नहीं है, इसलिए फ़ोन जुड़ नहीं सकता। आप इसी कंप्यूटर पर दूसरे ब्राउज़र टैब से जाँच कर सकते हैं।',
+    consent: 'मैं समझता/समझती हूँ कि स्पीकर की आवाज़ उसके फ़ोन से इस कंप्यूटर और फिर ट्रांसक्रिप्शन के लिए Gnani को भेजी जाती है, और कॉल में सभी की सहमति है। केवल अभिनय की हुई, काल्पनिक बातें इस्तेमाल होंगी।',
+    start: 'कॉल शुरू करें',
+    cancel: 'कॉल रद्द करें',
+    end: 'कॉल खत्म करें और रिपोर्ट पाएँ',
+    codeLabel: 'कॉल कोड',
+    scan: 'फ़ोन पर: यह कोड स्कैन करें, या नीचे का पता खोलकर कोड लिखें।',
+    joinAddress: 'जुड़ने का पता',
+    waitingSpeaker: 'स्पीकर के जुड़ने का इंतज़ार…',
+    speakerJoined: 'स्पीकर जुड़ गया है और सहमति की पुष्टि कर रहा है…',
+    listen: 'इस डिवाइस पर कॉल सुनें',
+    listenHint: 'शुरू में बंद रहता है। हेडफ़ोन लगाएँ, या फ़ोन को दूसरे कमरे में रखें, वरना फ़ोन इस कंप्यूटर की आवाज़ पकड़कर गूँज बनाएगा।',
+    expires: (m) => `कोड एक बार और ${m} मिनट तक चलता है।`,
+    speakerTitle: 'स्पीकर के रूप में कॉल से जुड़ें',
+    speakerIntro: 'आप स्पीकर हैं। आपकी आवाज़ रिसीवर के कंप्यूटर पर जाती है, जो कॉल में ठगी के तरीके जाँचता है। उस जाँच का कुछ भी इस फ़ोन पर नहीं दिखता।',
+    codeInput: 'कॉल कोड (6 अंक)',
+    codeInvalid: 'रिसीवर की स्क्रीन पर दिखा 6 अंकों का कोड लिखें।',
+    speakerConsent: 'मैं सहमत हूँ कि मेरी आवाज़ रिसीवर के कंप्यूटर और स्पीच-टू-टेक्स्ट व विश्लेषण के लिए Gnani को भेजी जाए। मैं केवल अभिनय की हुई, काल्पनिक बातें बोलूँगा/बोलूँगी, असली निजी, बैंक या पहचान की जानकारी कभी नहीं।',
+    join: 'कॉल से जुड़ें',
+    connecting: 'जुड़ रहा है…',
+    connected: 'जुड़ गए। अब आप बोल सकते हैं।',
+    muted: 'म्यूट',
+    mute: 'म्यूट करें',
+    unmute: 'अनम्यूट करें',
+    endCall: 'कॉल खत्म करें',
+    ended: 'कॉल खत्म हो गई।',
+    joinAnother: 'दूसरी कॉल से जुड़ें',
+    micDenied: 'माइक्रोफ़ोन बंद है। ब्राउज़र की साइट सेटिंग में इसे अनुमति दें और फिर कोशिश करें।',
+    keepScreenOn: 'कॉल के दौरान यह स्क्रीन चालू रखें, वरना फ़ोन आपकी आवाज़ भेजना बंद कर देता है।',
+    lostConnection: 'कनेक्शन टूट गया।',
+    roleSpeaker: 'स्पीकर',
+    nothingShown: 'इस फ़ोन पर कोई विश्लेषण नहीं दिखता।',
+  },
   live: {
     title: 'लाइव जाँच',
     intro: 'कॉल को होते समय सुनें, या किसी रिकॉर्डिंग को लाइव की तरह चलाएँ। शब्द पहचाने जाते ही जोखिम मीटर बदलता है। इसका उपयोग केवल कॉल में शामिल सभी लोगों की अनुमति से करें।',
@@ -404,7 +522,46 @@ const mr: Dict = {
     noteChannels: 'वक्ते दोन स्टीरिओ चॅनेल वापरून वेगळे केले.',
     noteSingle: 'फक्त एकच वक्ता आढळला, त्यामुळे हे सामान्य तपासणीसारखेच आहे.',
   },
-  nav: { upload: 'रेकॉर्डिंग अपलोड करा', live: 'लाइव तपासणी' },
+  nav: { upload: 'रेकॉर्डिंग अपलोड करा', live: 'लाइव तपासणी', call: 'कॉल स्वीकारा' },
+  call: {
+    nav: 'कॉल स्वीकारा',
+    title: 'कॉल स्वीकारा',
+    intro: 'कॉल सुरू करा, मग जो फोन स्पीकर होणार आहे त्यावर कोड स्कॅन करा किंवा पत्ता उघडा. हा संगणक रिसीव्हर आहे: तो कॉल ऐकतो आणि लाइव तपासणी दाखवतो. फक्त अभिनय केलेले, काल्पनिक बोलणे वापरा, खरी वैयक्तिक, बँक किंवा ओळखीची माहिती कधीही नको.',
+    publicLabel: 'सार्वजनिक पत्ता (टनेल विंडोमधून)',
+    publicHint: 'आधी टनेल सुरू करा (tools\\start_demo.bat). पत्ता असा दिसतो: https://something.trycloudflare.com',
+    noTunnel: 'अजून टनेलचा पत्ता नाही, त्यामुळे फोन जोडला जाऊ शकत नाही. याच संगणकावर दुसऱ्या ब्राउझर टॅबमधून तुम्ही चाचणी करू शकता.',
+    consent: 'मला समजते की स्पीकरचा आवाज त्याच्या फोनवरून या संगणकावर आणि नंतर ट्रान्सक्रिप्शनसाठी Gnani ला पाठवला जातो, आणि कॉलमधील सर्वांनी संमती दिली आहे. फक्त अभिनय केलेले, काल्पनिक बोलणे वापरले जाईल.',
+    start: 'कॉल सुरू करा',
+    cancel: 'कॉल रद्द करा',
+    end: 'कॉल संपवा आणि अहवाल मिळवा',
+    codeLabel: 'कॉल कोड',
+    scan: 'फोनवर: हा कोड स्कॅन करा, किंवा खालील पत्ता उघडून कोड टाका.',
+    joinAddress: 'जोडण्याचा पत्ता',
+    waitingSpeaker: 'स्पीकर जोडला जाण्याची वाट पाहत आहे…',
+    speakerJoined: 'स्पीकर जोडला गेला आहे आणि संमतीची खात्री करत आहे…',
+    listen: 'या डिव्हाइसवर कॉल ऐका',
+    listenHint: 'सुरुवातीला बंद असते. हेडफोन वापरा, किंवा फोन दुसऱ्या खोलीत ठेवा, नाहीतर फोन या संगणकाचा आवाज पकडून प्रतिध्वनी तयार करेल.',
+    expires: (m) => `कोड एकदाच आणि ${m} मिनिटांसाठी चालतो.`,
+    speakerTitle: 'स्पीकर म्हणून कॉलमध्ये जोडा',
+    speakerIntro: 'तुम्ही स्पीकर आहात. तुमचा आवाज रिसीव्हरच्या संगणकावर जातो, जो कॉलमध्ये फसवणुकीचे डावपेच तपासतो. त्या तपासणीतले काहीही या फोनवर दिसत नाही.',
+    codeInput: 'कॉल कोड (6 अंक)',
+    codeInvalid: 'रिसीव्हरच्या स्क्रीनवर दिसणारा 6 अंकी कोड टाका.',
+    speakerConsent: 'माझा आवाज रिसीव्हरच्या संगणकावर आणि स्पीच-टू-टेक्स्ट व विश्लेषणासाठी Gnani ला पाठवला जाण्यास माझी संमती आहे. मी फक्त अभिनय केलेले, काल्पनिक बोलेन, खरी वैयक्तिक, बँक किंवा ओळखीची माहिती कधीही नाही.',
+    join: 'कॉलमध्ये जोडा',
+    connecting: 'जोडत आहे…',
+    connected: 'जोडले गेले. आता तुम्ही बोलू शकता.',
+    muted: 'म्यूट',
+    mute: 'म्यूट करा',
+    unmute: 'अनम्यूट करा',
+    endCall: 'कॉल संपवा',
+    ended: 'कॉल संपला आहे.',
+    joinAnother: 'दुसऱ्या कॉलमध्ये जोडा',
+    micDenied: 'मायक्रोफोन बंद आहे. ब्राउझरच्या साइट सेटिंगमध्ये त्याला परवानगी द्या आणि पुन्हा प्रयत्न करा.',
+    keepScreenOn: 'कॉल सुरू असताना ही स्क्रीन चालू ठेवा, नाहीतर फोन तुमचा आवाज पाठवणे थांबवतो.',
+    lostConnection: 'कनेक्शन तुटले.',
+    roleSpeaker: 'स्पीकर',
+    nothingShown: 'या फोनवर कोणतेही विश्लेषण दिसत नाही.',
+  },
   live: {
     title: 'लाइव तपासणी',
     intro: 'कॉल सुरू असताना ऐका, किंवा एखादे रेकॉर्डिंग लाइव असल्यासारखे चालवा. शब्द ओळखले जाताच धोक्याचे मीटर बदलते. हे फक्त कॉलवरील सर्वांच्या परवानगीनेच वापरा.',

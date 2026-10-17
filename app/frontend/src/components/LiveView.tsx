@@ -7,12 +7,14 @@ interface Props {
   state: LiveState
   onOpenReport: (id: string) => void
   onAgain: () => void
+  /** Show the "what to do now" suggestions (call mode on the Receiver). */
+  advice?: boolean
 }
 
 /** Presentational part of the live check: meter, alert, evidence and transcript. */
-export default function LiveView({ t, state, onOpenReport, onAgain }: Props) {
+export default function LiveView({ t, state, onOpenReport, onAgain, advice = false }: Props) {
   const l = t.live
-  const status = { idle: '', connecting: l.connecting, live: l.listening, stopping: l.stopping, ended: '', error: '' }[state.status]
+  const status = { idle: '', connecting: l.connecting, waiting: t.call.waitingSpeaker, joined: t.call.speakerJoined, live: l.listening, stopping: l.stopping, ended: '', error: '' }[state.status]
   const limit = state.warning?.startsWith('limit:') ? Number(state.warning.slice(6)) : null
   return (
     <section className="card" aria-live="polite">
@@ -31,6 +33,13 @@ export default function LiveView({ t, state, onOpenReport, onAgain }: Props) {
         </div>
         <span className={`badge ${state.level}`} data-testid="live-level">{t.levels[state.level]}</span>
       </div>
+
+      {advice && state.tracks.length > 0 && (
+        <div className="advice" data-testid="live-advice">
+          <h4>{t.whatToDo}</h4>
+          <ul>{t.advice[state.level].map((a, i) => <li key={i}>{a}</li>)}</ul>
+        </div>
+      )}
 
       {state.hits.length > 0 && (
         <>

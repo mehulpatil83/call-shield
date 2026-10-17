@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as api from './api'
+import CallReceiver from './components/CallReceiver'
 import HistoryList from './components/HistoryList'
 import LivePanel from './components/LivePanel'
 import ProgressCard from './components/ProgressCard'
 import ReportView from './components/ReportView'
+import SpeakerPage from './components/SpeakerPage'
 import UploadCard from './components/UploadCard'
 import { LANG_NAMES, STRINGS } from './i18n'
 import type { AnalysisDetail, AnalysisSummary, Health, Lang, SpeechLang } from './types'
@@ -22,11 +24,14 @@ function useLang(): [Lang, (l: Lang) => void] {
   }]
 }
 
-type Route = { name: 'home' } | { name: 'live' } | { name: 'analysis'; id: string }
+type Route = { name: 'home' } | { name: 'live' } | { name: 'call' } | { name: 'join'; code: string } | { name: 'analysis'; id: string }
 
 function readRoute(): Route {
   const h = window.location.hash
   if (h === '#/live') return { name: 'live' }
+  if (h === '#/call') return { name: 'call' }
+  const code = /^#\/join\/(\d{0,6})$/.exec(h)?.[1]
+  if (code !== undefined) return { name: 'join', code }
   const id = /^#\/a\/([a-f0-9]{12})$/.exec(h)?.[1]
   return id ? { name: 'analysis', id } : { name: 'home' }
 }
@@ -39,7 +44,7 @@ function useRoute(): [Route, (r: Route) => void] {
     return () => window.removeEventListener('hashchange', on)
   }, [])
   return [route, (next) => {
-    window.location.hash = next.name === 'analysis' ? `#/a/${next.id}` : next.name === 'live' ? '#/live' : ''
+    window.location.hash = next.name === 'analysis' ? `#/a/${next.id}` : next.name === 'live' ? '#/live' : next.name === 'call' ? '#/call' : next.name === 'join' ? `#/join/${next.code}` : ''
   }]
 }
 
@@ -89,7 +94,7 @@ function AnalysisView({ id, lang, onBack }: { id: string; lang: Lang; onBack: ()
   return <ReportView detail={detail} t={t} onDelete={remove} onBack={onBack} />
 }
 
-export default function App() {
+function LocalApp() {
   const [lang, setLang] = useLang()
   const t = STRINGS[lang]
   const [route, setRoute] = useRoute()
@@ -149,16 +154,22 @@ export default function App() {
         </label>
       </header>
       <nav className="tabs" aria-label="Main">
-        <button type="button" className={`tab${route.name !== 'live' ? ' active' : ''}`} aria-current={route.name !== 'live' ? 'page' : undefined}
+        <button type="button" className={`tab${route.name === 'home' || route.name === 'analysis' ? ' active' : ''}`} aria-current={route.name === 'home' || route.name === 'analysis' ? 'page' : undefined}
                 onClick={() => setRoute({ name: 'home' })}>{t.nav.upload}</button>
         <button type="button" className={`tab${route.name === 'live' ? ' active' : ''}`} aria-current={route.name === 'live' ? 'page' : undefined}
                 onClick={() => setRoute({ name: 'live' })}>{t.nav.live}</button>
+        <button type="button" className={`tab${route.name === 'call' || route.name === 'join' ? ' active' : ''}`} aria-current={route.name === 'call' || route.name === 'join' ? 'page' : undefined}
+                onClick={() => setRoute({ name: 'call' })}>{t.nav.call}</button>
       </nav>
       <p className="notice">{t.privacy}</p>
       {error && <p className="notice warn" role="alert">{error}</p>}
 
       {route.name === 'live' ? (
         <LivePanel t={t} onOpenReport={(rid) => setId(rid)} />
+      ) : route.name === 'call' ? (
+        <CallReceiver t={t} onOpenReport={(rid) => setId(rid)} />
+      ) : route.name === 'join' ? (
+        <SpeakerPage t={t} initialCode={route.code} />
       ) : id ? (
         <AnalysisView id={id} lang={lang} onBack={() => setId(null)} />
       ) : (
@@ -170,4 +181,35 @@ export default function App() {
       )}
     </div>
   )
+}
+
+const LOCAL_NAMES = ['127.0.0.1', 'localhost']
+
+/** The phone opens the tunnel address: it only ever gets the Speaker screen (the server allows nothing else there). */
+export function SpeakerApp() {
+  const [lang, setLang] = useLang()
+  const t = STRINGS[lang]
+  useEffect(() => { document.documentElement.lang = lang }, [lang])
+  const code = /^#\/join\/(\d{0,6})$/.exec(window.location.hash)?.[1] ?? ''
+  return (
+    <div className="page phone">
+      <header className="top">
+        <div>
+          <h1>{t.appName}</h1>
+          <p className="mut">{t.call.roleSpeaker}</p>
+        </div>
+        <label className="field compact">
+          <span className="visually-hidden">{t.interfaceLanguage}</span>
+          <select aria-label={t.interfaceLanguage} value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
+            {(Object.keys(LANG_NAMES) as Lang[]).map((k) => <option key={k} value={k}>{LANG_NAMES[k]}</option>)}
+          </select>
+        </label>
+      </header>
+      <SpeakerPage t={t} initialCode={code} />
+    </div>
+  )
+}
+
+export default function App() {
+  return LOCAL_NAMES.includes(window.location.hostname) ? <LocalApp /> : <SpeakerApp />
 }
