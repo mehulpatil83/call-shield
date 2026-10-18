@@ -12,6 +12,8 @@ Security model (the tunnel makes this server reachable from the internet, so the
   * A Speaker needs the 6-digit code of a call that is waiting. A code works once, expires after 10 minutes, and wrong
     guesses are rate-limited per client. Only one Speaker and one Receiver can be in a call.
   * Nothing is accepted from the Speaker before the Speaker's consent message; the server enforces it.
+  * If the phone drops mid-call, the call waits GRACE_SECONDS for it. Only the same phone can rejoin: it holds a random
+    resume token that was given to it alone (never to the Receiver) when the call started.
 """
 from __future__ import annotations
 
@@ -27,6 +29,7 @@ import urllib.request
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
+import numpy as np
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -41,6 +44,8 @@ SPEAK_PATH = "/api/call/speak"
 CODE_RE = re.compile(r"^\d{6}$")
 CODE_TTL = 600.0                  # seconds a waiting call can be joined
 HELLO_TIMEOUT = 30.0              # seconds a Speaker has to confirm consent after joining
+GRACE_SECONDS = 60.0              # a dropped phone can rejoin the same call for this long (screen lock, weak signal)
+AUDIO_REPORT_EVERY = 0.25         # the Receiver is told how loud the incoming audio is at most this often (seconds)
 MAX_FAILS, FAIL_WINDOW = 8, 60.0  # wrong codes allowed per client per minute
 TUNNEL_METRICS = "http://127.0.0.1:20241/quicktunnel"     # cloudflared --metrics 127.0.0.1:20241 (best effort)
 
@@ -130,8 +135,13 @@ class CallRoom:
     created: float
     receiver: WebSocket | None = None
     speaker: WebSocket | None = None
-    state: str = "waiting"                 # waiting | joined | live | ended
+    state: str = "waiting"                 # waiting | joined | live | reconnecting | ended
     listen: bool = False
+    session: LiveSession | None = None
+    resume: str | None = None              # secret for the Speaker's phone only
+    conn_id: int = 0                       # which speaker connection is the current one
+    owns_busy: bool = False
+    grace_task: asyncio.Task | None = None
     stop: asyncio.Event | None = None      # set to make the speaker handler finish the call
     done: asyncio.Event | None = None      # set when the call is over (the receiver handler waits on it)
 
@@ -315,9 +325,120 @@ def add_call_routes(app: FastAPI, *, manager: CallManager, languages: dict, orig
             except Exception:
                 pass
 
+    # ------------------------------------------------------------------ ending a call ---------------------
+    async def end_call(room: CallRoom, problem: str | None = None) -> None:
+        """Stop the analysis, store the report, tell both sides. A call that never started goes back to waiting."""
+        if room.state == "ended":
+            return
+        session, room.session = room.session, None
+        speaker = room.speaker
+        try:
+            result = await session.stop() if session else None
+            if problem and speaker is not None:
+                await _send_safe(speaker, {"type": "error", "message": problem})
+            if result is not None:
+                if result.seconds >= 1.0:
+                    loop = asyncio.get_running_loop()
+                    sid = await loop.run_in_executor(pool, finish_live, result, room.language, room.skip_audio)
+                    await room.to_receiver({"type": "ended", "id": sid, "level": result.level, "max_level": result.max_level})
+                else:
+                    await room.to_receiver({"type": "ended", "id": None, "message": "The call was too short to analyse."})
+                if speaker is not None:
+                    await _send_safe(speaker, {"type": "ended"})
+                manager.end(room)
+                if room.done:
+                    room.done.set()
+            else:                                             # the speaker never started: let the code be used again
+                room.speaker, room.state, room.stop = None, "waiting", None
+                if room.receiver is None:                     # ...unless the receiver has gone too
+                    manager.end(room)
+                else:
+                    await room.to_receiver({"type": "call", "state": "waiting"})
+                if speaker is not None:
+                    await _send_safe(speaker, {"type": "ended"})
+        finally:
+            if room.owns_busy:
+                live_busy["on"], room.owns_busy = False, False
+            if speaker is not None:
+                try:
+                    await speaker.close()
+                except Exception:
+                    pass
+
+    async def grace(room: CallRoom) -> None:
+        """The phone dropped: keep the call (and the speech-to-text streams) alive for a while so it can rejoin."""
+        deadline = time.monotonic() + GRACE_SECONDS
+        while time.monotonic() < deadline:
+            if room.state != "reconnecting":
+                return
+            if room.stop is not None and room.stop.is_set():
+                break
+            if room.session is not None:
+                await room.session.keepalive()
+            await asyncio.sleep(0.032)
+        await end_call(room)
+
+    async def pump(ws: WebSocket, room: CallRoom, my_id: int) -> tuple[str, str | None]:
+        """Read the phone's audio until it stops, drops, or the Receiver ends the call."""
+        stop_wait = asyncio.ensure_future(room.stop.wait())
+        recv: asyncio.Future | None = None
+        last_report, peak = 0.0, 0.0
+        try:
+            while True:
+                if recv is None:
+                    recv = asyncio.ensure_future(ws.receive())
+                done, _ = await asyncio.wait({recv, stop_wait}, return_when=asyncio.FIRST_COMPLETED)
+                if room.conn_id != my_id:
+                    return "superseded", None
+                if stop_wait in done:
+                    return "receiver_end", None
+                msg, recv = recv.result(), None
+                if msg.get("type") == "websocket.disconnect":
+                    return "dropped", None
+                data = msg.get("bytes")
+                if data is not None:
+                    if room.session is None:
+                        return "problem", "The call is no longer running."
+                    if not await room.session.feed(data):
+                        await room.to_receiver({"type": "limit", "seconds": LIVE_MAX_SECONDS})
+                        return "limit", None
+                    if room.listen:
+                        await room.bytes_to_receiver(data)
+                    if len(data) >= 2:                                      # tell the Receiver audio is arriving, and how loud
+                        a = np.frombuffer(data[: len(data) - len(data) % 2], dtype="<i2").astype("float32") / 32768.0
+                        peak = max(peak, float(np.sqrt(np.mean(a * a))))
+                    now = time.monotonic()
+                    if now - last_report >= AUDIO_REPORT_EVERY:
+                        await room.to_receiver({"type": "audio", "rms": round(peak, 4)})
+                        last_report, peak = now, 0.0
+                elif msg.get("text"):
+                    try:
+                        kind = json.loads(msg["text"]).get("type")
+                    except json.JSONDecodeError:
+                        continue
+                    if kind == "stop":
+                        return "stop", None
+        except Exception as e:                                # never log audio or transcripts
+            log.exception("call failed")
+            return "problem", type(e).__name__
+        finally:
+            for t in (recv, stop_wait):
+                if t is not None:
+                    t.cancel()
+
+    async def after_pump(room: CallRoom, ws: WebSocket, outcome: str, problem: str | None) -> None:
+        if outcome == "superseded":
+            return
+        if outcome == "dropped" and room.session is not None and room.state == "live":
+            room.speaker, room.state = None, "reconnecting"
+            await room.to_receiver({"type": "call", "state": "reconnecting", "seconds": int(GRACE_SECONDS)})
+            room.grace_task = asyncio.ensure_future(grace(room))
+            return
+        await end_call(room, problem)
+
     # ------------------------------------------------------------------ speaker ----------------------------
     @app.websocket(SPEAK_PATH)
-    async def call_speak(ws: WebSocket, code: str = ""):
+    async def call_speak(ws: WebSocket, code: str = "", resume: str = ""):
         if not speak_origin_ok(ws.headers.get("origin"), public_hosts):
             await ws.close(code=4403)
             return
@@ -334,6 +455,32 @@ def add_call_routes(app: FastAPI, *, manager: CallManager, languages: dict, orig
             await refuse("Too many wrong codes. Wait a minute and try again.", 4429)
             return
         room = manager.get(code) if CODE_RE.fullmatch(code) else None
+
+        # ---- the same phone coming back after a drop or a screen lock -----------------------------------------
+        if resume:
+            ok = (room is not None and room.resume is not None and room.state in ("live", "reconnecting")
+                  and secrets.compare_digest(resume, room.resume))
+            if not ok:
+                await refuse("This call can no longer be rejoined.", 4404, failed=True)
+                return
+            room.conn_id += 1
+            my_id = room.conn_id
+            if room.grace_task is not None:
+                room.grace_task.cancel()
+                room.grace_task = None
+            old, room.speaker, room.state = room.speaker, ws, "live"
+            if old is not None and old is not ws:
+                try:
+                    await old.close()
+                except Exception:
+                    pass
+            await _send_safe(ws, {"type": "ready", "resume": room.resume, "resumed": True})
+            await room.to_receiver({"type": "call", "state": "live"})
+            outcome, problem = await pump(ws, room, my_id)
+            await after_pump(room, ws, outcome, problem)
+            return
+
+        # ---- a new speaker ------------------------------------------------------------------------------------
         if not room:
             await refuse("That code is not valid, or the call has expired.", 4404, failed=True)
             return
@@ -343,29 +490,33 @@ def add_call_routes(app: FastAPI, *, manager: CallManager, languages: dict, orig
         if room.speaker is not None:
             await refuse("This call already has a speaker.", 4409)
             return
+        if room.state != "waiting":
+            await refuse("This call has already started.", 4409)
+            return
 
+        room.conn_id += 1
+        my_id = room.conn_id
         room.speaker, room.state, room.stop = ws, "joined", asyncio.Event()
         await room.to_receiver({"type": "call", "state": "joined"})
         await _send_safe(ws, {"type": "joined", "language": room.language})
 
-        session: LiveSession | None = None
-        owns_busy = False
-        problem: str | None = None
-        recv: asyncio.Future | None = None
-        stop_wait = asyncio.ensure_future(room.stop.wait())
-        deadline = time.monotonic() + HELLO_TIMEOUT
-
         async def forward(msg: dict) -> None:
             await room.to_receiver(msg)
-            if msg.get("type") == "ready":
-                await _send_safe(ws, {"type": "ready"})       # the Speaker only learns that it may talk
+            if msg.get("type") == "ready":                    # the Speaker only learns that it may talk (and its resume token)
+                await _send_safe(ws, {"type": "ready", "resume": room.resume})
 
+        # phase 1: wait for the consent message
+        problem: str | None = None
+        stop_wait = asyncio.ensure_future(room.stop.wait())
+        recv: asyncio.Future | None = None
+        deadline = time.monotonic() + HELLO_TIMEOUT
+        started = False
         try:
-            while True:
+            while not started:
                 if recv is None:
                     recv = asyncio.ensure_future(ws.receive())
-                timeout = None if session else max(0.05, deadline - time.monotonic())
-                done, _ = await asyncio.wait({recv, stop_wait}, timeout=timeout, return_when=asyncio.FIRST_COMPLETED)
+                done, _ = await asyncio.wait({recv, stop_wait}, timeout=max(0.05, deadline - time.monotonic()),
+                                             return_when=asyncio.FIRST_COMPLETED)
                 if not done:
                     problem = "Consent was not confirmed in time."
                     break
@@ -375,74 +526,46 @@ def add_call_routes(app: FastAPI, *, manager: CallManager, languages: dict, orig
                 if msg.get("type") == "websocket.disconnect":
                     break
                 if msg.get("bytes") is not None:
-                    if not session:
-                        problem = "Consent is required before audio is accepted."
+                    problem = "Consent is required before audio is accepted."
+                    break
+                if not msg.get("text"):
+                    continue
+                try:
+                    data = json.loads(msg["text"])
+                except json.JSONDecodeError:
+                    continue
+                if data.get("type") == "hello":
+                    if data.get("consent") is not True:
+                        problem = "Consent is required before the call can start."
                         break
-                    if not await session.feed(msg["bytes"]):
-                        await room.to_receiver({"type": "limit", "seconds": LIVE_MAX_SECONDS})
+                    if live_busy["on"]:
+                        problem = "Another live check is running. Try again in a minute."
                         break
-                    if room.listen:
-                        await room.bytes_to_receiver(msg["bytes"])
-                elif msg.get("text"):
+                    live_busy["on"], room.owns_busy = True, True
                     try:
-                        data = json.loads(msg["text"])
-                    except json.JSONDecodeError:
-                        continue
-                    kind = data.get("type")
-                    if kind == "hello" and not session:
-                        if data.get("consent") is not True:
-                            problem = "Consent is required before the call can start."
-                            break
-                        if live_busy["on"]:
-                            problem = "Another live check is running. Try again in a minute."
-                            break
-                        live_busy["on"], owns_busy = True, True
-                        try:
-                            session = LiveSession(room.language, stream_factory, forward)
-                            await session.start()
-                            room.state = "live"
-                        except Exception as e:
-                            log.exception("could not start the call analysis")
-                            await room.to_receiver({"type": "error", "message": f"{type(e).__name__}: {str(e)[:200]}"})
-                            session, problem = None, "The receiver could not start the analysis."
-                            break
-                    elif kind == "stop":
+                        room.resume = secrets.token_urlsafe(16)
+                        room.session = LiveSession(room.language, stream_factory, forward)
+                        await room.session.start()
+                        room.state, started = "live", True
+                    except Exception as e:
+                        log.exception("could not start the call analysis")
+                        await room.to_receiver({"type": "error", "message": f"{type(e).__name__}: {str(e)[:200]}"})
+                        room.session, room.resume = None, None
+                        problem = "The receiver could not start the analysis."
                         break
-        except Exception as e:                                # never log audio or transcripts
+                elif data.get("type") == "stop":
+                    break
+        except Exception as e:
             log.exception("call failed")
-            problem = problem or f"{type(e).__name__}"
+            problem = problem or type(e).__name__
         finally:
             for t in (recv, stop_wait):
                 if t is not None:
                     t.cancel()
 
-        # ---- tear down -------------------------------------------------------------------------------------
-        try:
-            result = await session.stop() if session else None
-            if problem:
-                await _send_safe(ws, {"type": "error", "message": problem})
-            if result is not None:
-                if result.seconds >= 1.0:
-                    loop = asyncio.get_running_loop()
-                    sid = await loop.run_in_executor(pool, finish_live, result, room.language, room.skip_audio)
-                    await room.to_receiver({"type": "ended", "id": sid, "level": result.level, "max_level": result.max_level})
-                else:
-                    await room.to_receiver({"type": "ended", "id": None, "message": "The call was too short to analyse."})
-                await _send_safe(ws, {"type": "ended"})
-                manager.end(room)
-                if room.done:
-                    room.done.set()
-            else:                                             # the speaker never started: let the code be used again
-                room.speaker, room.state, room.stop = None, "waiting", None
-                if room.receiver is None:                     # ...unless the receiver has gone too
-                    manager.end(room)
-                else:
-                    await room.to_receiver({"type": "call", "state": "waiting"})
-                await _send_safe(ws, {"type": "ended"})
-        finally:
-            if owns_busy:
-                live_busy["on"] = False
-            try:
-                await ws.close()
-            except Exception:
-                pass
+        if not started:
+            await end_call(room, problem)
+            return
+        # phase 2: stream (also used again when the phone rejoins)
+        outcome, problem = await pump(ws, room, my_id)
+        await after_pump(room, ws, outcome, problem)

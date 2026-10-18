@@ -60,6 +60,17 @@ export interface CallText {
   lostConnection: string
   roleSpeaker: string
   nothingShown: string
+  levelLabel: string
+  speakHint: string
+  silenceWarning: string
+  reconnecting: string
+  rejoinTitle: string
+  rejoinButton: string
+  receiverReconnecting: (seconds: number) => string
+  receivingAudio: string
+  audioLevelLabel: string
+  audioNone: string
+  audioSilent: string
 }
 export interface SpeakerText {
   title: string
@@ -192,6 +203,17 @@ const en: Dict = {
     lostConnection: 'The connection was lost.',
     roleSpeaker: 'Speaker',
     nothingShown: 'This phone shows no analysis.',
+    levelLabel: 'Microphone level',
+    speakHint: 'Speak and watch the bar move.',
+    silenceWarning: 'We cannot hear you. Check that you are not muted, move closer to the microphone, and that the microphone is allowed.',
+    reconnecting: 'Connection lost. Trying to rejoin the call…',
+    rejoinTitle: 'Your call may still be running',
+    rejoinButton: 'Rejoin the call',
+    receiverReconnecting: (s) => `The phone lost its connection. Waiting up to ${s} seconds for it to rejoin…`,
+    receivingAudio: 'Receiving audio from the phone',
+    audioLevelLabel: 'Incoming audio level',
+    audioNone: 'No audio is arriving from the phone.',
+    audioSilent: 'The phone is sending silence: it may be muted, or nobody is speaking.',
   },
   live: {
     title: 'Live check',
@@ -318,6 +340,7 @@ const en: Dict = {
     verification_bypass: { label: 'Discourages checking', explain: 'Discourages you from verifying, hanging up or following the normal process.' },
     authority: { label: 'Claims to be a bank or authority', explain: 'Scammers claim authority to gain trust.' },
     kyc_pretext: { label: 'Uses a KYC pretext', explain: 'KYC updates are a very common opening in bank scams.' },
+    account_alert: { label: 'Claims a problem with your account', explain: 'Fake fraud-department calls often open with suspicious activity or unauthorised charges, or offer a refund or prize.' },
     warning_otp: { label: 'Warning about sharing codes', explain: 'Cautionary wording such as "never share your OTP". Treated as a warning, not a request.' },
     warning_cred: { label: 'Warning about sharing a PIN or password', explain: 'Cautionary wording. Treated as a warning, not a request.' },
   },
@@ -377,6 +400,17 @@ const hi: Dict = {
     lostConnection: 'कनेक्शन टूट गया।',
     roleSpeaker: 'स्पीकर',
     nothingShown: 'इस फ़ोन पर कोई विश्लेषण नहीं दिखता।',
+    levelLabel: 'माइक्रोफ़ोन का स्तर',
+    speakHint: 'बोलिए और पट्टी को हिलते देखिए।',
+    silenceWarning: 'हमें आपकी आवाज़ नहीं आ रही। देखें कि म्यूट तो नहीं है, माइक्रोफ़ोन के पास आएँ, और माइक्रोफ़ोन की अनुमति दी गई हो।',
+    reconnecting: 'कनेक्शन टूट गया। कॉल से दोबारा जुड़ने की कोशिश जारी है…',
+    rejoinTitle: 'आपकी कॉल शायद अभी चल रही है',
+    rejoinButton: 'कॉल से दोबारा जुड़ें',
+    receiverReconnecting: (s) => `फ़ोन का कनेक्शन टूट गया। दोबारा जुड़ने के लिए ${s} सेकंड तक इंतज़ार…`,
+    receivingAudio: 'फ़ोन से आवाज़ आ रही है',
+    audioLevelLabel: 'आने वाली आवाज़ का स्तर',
+    audioNone: 'फ़ोन से कोई आवाज़ नहीं आ रही।',
+    audioSilent: 'फ़ोन चुप्पी भेज रहा है: वह म्यूट हो सकता है, या कोई बोल नहीं रहा।',
   },
   live: {
     title: 'लाइव जाँच',
@@ -503,6 +537,7 @@ const hi: Dict = {
     verification_bypass: { label: 'जाँच करने से रोकता है', explain: 'आपको जाँच करने, कॉल काटने या सामान्य प्रक्रिया अपनाने से रोकता है।' },
     authority: { label: 'बैंक या अधिकारी होने का दावा', explain: 'ठग भरोसा जीतने के लिए अधिकार का दावा करते हैं।' },
     kyc_pretext: { label: 'KYC का बहाना', explain: 'KYC अपडेट बैंक ठगी की बहुत आम शुरुआत है।' },
+    account_alert: { label: 'खाते में गड़बड़ी का दावा', explain: 'नकली फ्रॉड-विभाग की कॉल अक्सर संदिग्ध गतिविधि या अनधिकृत चार्ज से शुरू होती हैं, या रिफंड या इनाम का लालच देती हैं।' },
     warning_otp: { label: 'कोड साझा न करने की चेतावनी', explain: '"अपना OTP किसी को न बताएँ" जैसे सावधानी वाले शब्द। इसे माँग नहीं, चेतावनी माना जाता है।' },
     warning_cred: { label: 'पिन या पासवर्ड साझा न करने की चेतावनी', explain: 'सावधानी वाले शब्द। इसे माँग नहीं, चेतावनी माना जाता है।' },
   },
@@ -561,6 +596,17 @@ const mr: Dict = {
     lostConnection: 'कनेक्शन तुटले.',
     roleSpeaker: 'स्पीकर',
     nothingShown: 'या फोनवर कोणतेही विश्लेषण दिसत नाही.',
+    levelLabel: 'मायक्रोफोनची पातळी',
+    speakHint: 'बोला आणि पट्टी हलताना पहा.',
+    silenceWarning: 'आम्हाला तुमचा आवाज ऐकू येत नाही. म्यूट नाही ना ते पहा, मायक्रोफोनच्या जवळ या, आणि मायक्रोफोनला परवानगी दिलेली असावी.',
+    reconnecting: 'कनेक्शन तुटले. कॉलमध्ये पुन्हा जोडण्याचा प्रयत्न सुरू आहे…',
+    rejoinTitle: 'तुमचा कॉल कदाचित अजून सुरू आहे',
+    rejoinButton: 'कॉलमध्ये पुन्हा जोडा',
+    receiverReconnecting: (s) => `फोनचे कनेक्शन तुटले. पुन्हा जोडण्यासाठी ${s} सेकंदांपर्यंत वाट पाहत आहे…`,
+    receivingAudio: 'फोनवरून आवाज येत आहे',
+    audioLevelLabel: 'येणाऱ्या आवाजाची पातळी',
+    audioNone: 'फोनवरून कोणताही आवाज येत नाही.',
+    audioSilent: 'फोन शांतता पाठवत आहे: तो म्यूट असू शकतो, किंवा कोणी बोलत नाही.',
   },
   live: {
     title: 'लाइव तपासणी',
@@ -687,6 +733,7 @@ const mr: Dict = {
     verification_bypass: { label: 'तपासणी करण्यापासून रोखतो', explain: 'तुम्हाला तपासणी करण्यापासून, कॉल कट करण्यापासून किंवा नेहमीची प्रक्रिया पाळण्यापासून परावृत्त करतो.' },
     authority: { label: 'बँक किंवा अधिकारी असल्याचा दावा', explain: 'फसवणूक करणारे विश्वास जिंकण्यासाठी अधिकाराचा दावा करतात.' },
     kyc_pretext: { label: 'केवायसीचा बहाणा', explain: 'केवायसी अपडेट ही बँक फसवणुकीची अतिशय सामान्य सुरुवात आहे.' },
+    account_alert: { label: 'खात्यात गडबड असल्याचा दावा', explain: 'खोट्या फसवणूक-विभागाचे कॉल अनेकदा संशयास्पद व्यवहार किंवा अनधिकृत शुल्कापासून सुरू होतात, किंवा परताव्याचे किंवा बक्षिसाचे आमिष दाखवतात.' },
     warning_otp: { label: 'कोड सांगू नका अशी सूचना', explain: '"तुमचा OTP कोणालाही सांगू नका" अशा सावधगिरीच्या शब्दांना मागणी नव्हे, तर सूचना मानले जाते.' },
     warning_cred: { label: 'पिन किंवा पासवर्ड सांगू नका अशी सूचना', explain: 'सावधगिरीचे शब्द. त्यांना मागणी नव्हे, तर सूचना मानले जाते.' },
   },

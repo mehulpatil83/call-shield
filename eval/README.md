@@ -40,3 +40,14 @@ noise at 15 dB. These are simulations, not real networks.
 - Intervals are Wilson 95% and are wide with small samples. Read them, not just the percentage.
 - *AUC*: chance that a random real voice scores above a random synthetic one (0.5 = coin flip).
 - Hard cases are legitimate calls that sound suspicious (delivery code at the door, a real bank fraud alert).
+
+## Call-style English scripts (phone demo)
+
+`eval/call_scripts.py` holds 20 acted English scripts (10 dev, 10 test; 10 scam, 10 benign, 4 of them hard cases) and
+`eval/call_eval.py` rates them with the rules and simulates how soon an alert would fire.
+
+    python -m eval.call_eval                                 dev scripts (fine to tune on)
+    python -m eval.call_eval --split all --i-am-done-tuning --write     everything, plus eval/results/call_eval_all.txt
+
+The same author wrote the scripts and the word lists, so treat the numbers as optimistic. Record your own calls
+through the phone page and compare.

@@ -15,7 +15,7 @@ interface Props {
 
 /** Receiver screen (this computer): start a call, show the code and QR for the phone, then the live check. */
 export default function CallReceiver({ t, onOpenReport, deps, loadConfig = api.callConfig }: Props) {
-  const { state, info, listening, start, setListen, end, reset } = useCallReceiver(deps)
+  const { state, info, listening, audio, start, setListen, end, reset } = useCallReceiver(deps)
   const c = t.call
   const [language, setLanguage] = useState<SpeechLang>('en')
   const [consent, setConsent] = useState(false)
@@ -34,7 +34,7 @@ export default function CallReceiver({ t, onOpenReport, deps, loadConfig = api.c
     void start(language, skipAudio, publicUrl.trim() || null)
   }
   const idle = state.status === 'idle'
-  const inCall = state.status === 'live' || state.status === 'stopping'
+  const inCall = state.status === 'live' || state.status === 'reconnecting' || state.status === 'stopping'
   const waiting = state.status === 'waiting' || state.status === 'joined' || (state.status === 'connecting' && info !== null)
 
   return (
@@ -93,6 +93,19 @@ export default function CallReceiver({ t, onOpenReport, deps, loadConfig = api.c
           )}
           {inCall && (
             <>
+              {state.status === 'reconnecting' ? (
+                <p className="notice warn" role="status" data-testid="call-reconnecting">{c.receiverReconnecting(60)}</p>
+              ) : (
+                <div className="audio-status" data-testid="call-audio" data-state={audio.state}>
+                  <div className="levelbar small" role="meter" aria-label={c.audioLevelLabel} aria-valuemin={0} aria-valuemax={100}
+                       aria-valuenow={Math.round(audio.level * 100)}>
+                    <div className="levelfill" style={{ width: `${Math.round(audio.level * 100)}%` }} />
+                  </div>
+                  <p className={audio.state === 'ok' ? 'mut' : 'notice warn'} role="status">
+                    {audio.state === 'ok' ? c.receivingAudio : audio.state === 'silent' ? c.audioSilent : c.audioNone}
+                  </p>
+                </div>
+              )}
               <label className="check">
                 <input type="checkbox" checked={listening} onChange={(e) => setListen(e.target.checked)} />
                 <span>{c.listen}</span>

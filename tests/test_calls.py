@@ -60,7 +60,8 @@ def test_speaker_talks_receiver_sees_analysis_and_speaker_sees_none(tmp_path):
             assert tx.receive_json() == {"type": "joined", "language": "en"}
             assert rx.receive_json() == {"type": "call", "state": "joined"}
             tx.send_json({"type": "hello", "consent": True})
-            assert tx.receive_json() == {"type": "ready"}
+            ready = tx.receive_json()
+            assert ready["type"] == "ready" and len(ready["resume"]) >= 16       # the phone alone gets a rejoin token
             data = pcm(2.0)
             for i in range(0, len(data), 3000):
                 tx.send_bytes(data[i:i + 3000])
@@ -71,6 +72,8 @@ def test_speaker_talks_receiver_sees_analysis_and_speaker_sees_none(tmp_path):
     assert {m["type"] for m in to_speaker} <= {"ended"}
     types = [m["type"] for m in to_receiver]
     assert types[0] == "ready" and "analysis" in types and types.count("alert") == 2
+    assert not any("resume" in m for m in to_receiver)                           # the Receiver never sees the rejoin token
+    assert "audio" in types and all(0 <= m["rms"] <= 1 for m in to_receiver if m["type"] == "audio")
     last = [m for m in to_receiver if m["type"] == "analysis"][-1]
     assert last["level"] == "high" and "otp" in last["tracks"][0]["text"]
     ended = to_receiver[-1]
@@ -318,3 +321,146 @@ def test_a_call_works_without_any_tunnel_for_testing_on_the_laptop(tmp_path):
         with receive(c, info["code"]) as rx, speak(c, info["code"], headers={}) as tx:    # two tabs on 127.0.0.1
             rx.receive_json()
             assert tx.receive_json()["type"] == "joined"
+
+
+# ------------------------------------------------------------------------------------------ rejoin after a drop --
+def phone_drops(tx, rx):
+    """Simulate the phone losing its connection: a real server sees a disconnect (the test client would otherwise cancel the
+    handler when the with-block exits, which is not what a network drop does). Waits until the Receiver is told."""
+    tx.close(1006)
+    while True:
+        m = rx.receive_json()
+        if m.get("type") == "call" and m.get("state") == "reconnecting":
+            return m
+
+
+def start_live(c, rx, tx):
+    """Walk a call to the live state and return the phone's resume token."""
+    rx.receive_json(); tx.receive_json(); rx.receive_json()
+    tx.send_json({"type": "hello", "consent": True})
+    ready = tx.receive_json()
+    assert rx.receive_json()["type"] == "ready"
+    return ready["resume"]
+
+
+def test_phone_drops_and_rejoins_the_same_call_and_the_report_covers_both_parts(tmp_path):
+    with TestClient(make_app(tmp_path)) as c:
+        info = new_call(c)
+        with receive(c, info["code"]) as rx:
+            with speak(c, info["code"]) as tx:
+                token = start_live(c, rx, tx)
+                tx.send_bytes(pcm(1.0))
+                # the connection is gone without a "stop": the Receiver is told, the call is not ended
+                assert phone_drops(tx, rx) == {"type": "call", "state": "reconnecting", "seconds": 60}
+            with c.websocket_connect(f"/api/call/speak?code={info['code']}&resume={token}", headers=PUBLIC) as tx2:
+                again = tx2.receive_json()
+                assert again["type"] == "ready" and again["resumed"] is True and again["resume"] == token
+                tx2.send_bytes(pcm(1.0))
+                tx2.send_text('{"type":"stop"}')
+                assert drain(tx2)[-1] == {"type": "ended"}
+            rest = drain(rx)
+        assert {"type": "call", "state": "live"} in rest
+        ended = rest[-1]
+        assert ended["type"] == "ended" and ended["id"]
+        rec = c.get(f"/api/analyses/{ended['id']}").json()
+        assert rec["report"]["meta"]["audio_seconds"] >= 1.9                 # both parts, and no keepalive silence stored
+        assert len(FakeStream.instances) == 1                                # the same analysis streams carried on
+
+
+def test_rejoin_needs_the_right_token_and_a_call_in_progress(tmp_path):
+    with TestClient(make_app(tmp_path)) as c:
+        info = new_call(c)
+        with receive(c, info["code"]) as rx:
+            with c.websocket_connect(f"/api/call/speak?code={info['code']}&resume=guess", headers=PUBLIC) as bad:
+                assert "can no longer be rejoined" in bad.receive_json()["message"]      # nothing to resume yet
+            with speak(c, info["code"]) as tx:
+                token = start_live(c, rx, tx)
+                with c.websocket_connect(f"/api/call/speak?code={info['code']}&resume=wrong-token-value", headers=PUBLIC) as bad:
+                    assert "can no longer be rejoined" in bad.receive_json()["message"]
+                tx.send_text('{"type":"stop"}')
+                drain(tx)
+        with c.websocket_connect(f"/api/call/speak?code={info['code']}&resume={token}", headers=PUBLIC) as late:
+            assert "can no longer be rejoined" in late.receive_json()["message"]          # the call is over
+
+
+def test_a_brand_new_phone_cannot_join_a_call_that_has_already_started(tmp_path):
+    with TestClient(make_app(tmp_path)) as c:
+        info = new_call(c)
+        with receive(c, info["code"]) as rx:
+            with speak(c, info["code"]) as tx:
+                start_live(c, rx, tx)
+                tx.send_bytes(pcm(0.5))
+                phone_drops(tx, rx)
+            with speak(c, info["code"]) as other:                          # the first phone dropped; a stranger tries the code
+                assert "already started" in other.receive_json()["message"]
+
+
+def test_a_rejoin_replaces_a_connection_the_server_has_not_noticed_is_dead(tmp_path):
+    with TestClient(make_app(tmp_path)) as c:
+        info = new_call(c)
+        with receive(c, info["code"]) as rx, speak(c, info["code"]) as old:
+            token = start_live(c, rx, old)
+            with c.websocket_connect(f"/api/call/speak?code={info['code']}&resume={token}", headers=PUBLIC) as new:
+                assert new.receive_json()["resumed"] is True
+                new.send_bytes(pcm(1.2))
+                new.send_text('{"type":"stop"}')
+                assert drain(new)[-1] == {"type": "ended"}
+            ended = [m for m in drain(rx) if m["type"] == "ended"][0]
+            assert ended["id"]                                             # the old socket's end did not end or double-store the call
+
+
+def test_receiver_can_end_the_call_while_the_phone_is_reconnecting(tmp_path):
+    with TestClient(make_app(tmp_path)) as c:
+        info = new_call(c)
+        with receive(c, info["code"]) as rx:
+            with speak(c, info["code"]) as tx:
+                start_live(c, rx, tx)
+                tx.send_bytes(pcm(2.0))
+                phone_drops(tx, rx)
+            rx.send_json({"type": "end"})
+            ended = [m for m in drain(rx) if m["type"] == "ended"][0]
+            assert ended["id"]
+
+
+def test_the_call_ends_by_itself_when_the_phone_does_not_come_back(tmp_path, monkeypatch):
+    monkeypatch.setattr(calls_mod, "GRACE_SECONDS", 0.3)
+    with TestClient(make_app(tmp_path)) as c:
+        info = new_call(c)
+        with receive(c, info["code"]) as rx:
+            with speak(c, info["code"]) as tx:
+                start_live(c, rx, tx)
+                tx.send_bytes(pcm(2.0))
+                phone_drops(tx, rx)
+            ended = [m for m in drain(rx) if m["type"] == "ended"][0]
+            assert ended["id"] and ended["max_level"] in ("low", "elevated", "high")
+        assert c.post("/api/calls", json={"language": "en", "consent": True}).status_code == 201     # the analysis slot is free again
+
+
+def test_receiver_hears_about_audio_and_its_level(tmp_path):
+    with TestClient(make_app(tmp_path)) as c:
+        info = new_call(c)
+        with receive(c, info["code"]) as rx, speak(c, info["code"]) as tx:
+            start_live(c, rx, tx)
+            tx.send_bytes(pcm(0.5, amp=0.5))
+            tx.send_bytes(bytes(3200))
+            tx.send_text('{"type":"stop"}')
+            audio = [m for m in drain(rx) if m["type"] == "audio"]
+    assert audio and max(m["rms"] for m in audio) > 0.1                    # loud sine wave: rms about 0.35
+
+
+def test_keepalive_sends_silence_to_the_streams_but_not_to_the_stored_audio():
+    import asyncio
+    from core.live import FRAME_BYTES, LiveSession
+
+    async def go():
+        stream = FakeStream([])
+        s = LiveSession("en", lambda code: stream, lambda m: asyncio.sleep(0))
+        await s.start()
+        await s.feed(pcm(0.2))
+        before, frames = len(s.pcm), stream.frames
+        await s.keepalive()
+        await s.keepalive()
+        return before == len(s.pcm), stream.frames - frames, stream.sent_sizes
+
+    same, extra, sizes = asyncio.run(go())
+    assert same and extra == 2 and sizes == {FRAME_BYTES}

@@ -73,7 +73,7 @@ describe('SpeakerPage (the phone)', () => {
     expect(sock().sent[1]).toBe(chunk)
     // a stray analysis message must never be drawn on the phone
     sock().push({ type: 'analysis', level: 'high', score: 9, summary: '', seconds: 3, tracks: [], hits: [] })
-    expect(screen.queryByRole('meter')).toBeNull()
+    expect(screen.queryByRole('meter', { name: t.live.meter })).toBeNull()
     expect(screen.getByText(t.call.nothingShown)).toBeInTheDocument()
     // mute sends silence of the same size
     await user.click(screen.getByRole('button', { name: t.call.mute }))
@@ -164,7 +164,7 @@ describe('CallReceiver (the laptop)', () => {
     sock().push({ type: 'analysis', level: 'high', score: 8, summary: '', seconds: 9, hits: [hit],
                   tracks: [{ code: 'en-IN', text: 'please share the otp now', hits: [hit] }] })
     sock().push({ type: 'alert', level: 'high' })
-    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '8')
+    expect(screen.getByRole('meter', { name: t.live.meter })).toHaveAttribute('aria-valuenow', '8')
     expect(screen.getByTestId('live-alert')).toHaveTextContent(t.live.alertHigh)
     expect(document.querySelector('mark.request')?.textContent).toBe('share the otp')
     expect(screen.getByTestId('live-advice')).toHaveTextContent(t.advice.high[0])

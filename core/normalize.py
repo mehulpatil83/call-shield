@@ -71,15 +71,47 @@ def lev(a: str, b: str) -> int:
     return prev[-1]
 
 
+def stem(t: str) -> str:
+    """Rough English stem so inflections match (verify / verifying / verified, block / blocked / blocking).
+    Only ASCII words of 5+ letters are touched; everything else is returned unchanged."""
+    if len(t) < 5 or not (t.isascii() and t.isalpha()):
+        return t
+    for suf, rep in (("ies", "y"), ("ied", "y"), ("ing", ""), ("ed", ""), ("es", ""), ("s", "")):
+        if t.endswith(suf) and len(t) - len(suf) >= 3 and not (suf == "s" and t.endswith("ss")):
+            t = t[:-len(suf)] + rep
+            break
+    if len(t) > 3 and t.endswith("e"):
+        t = t[:-1]
+    if len(t) > 3 and t[-1] == t[-2] and t[-1] not in "aeioulsz":
+        t = t[:-1]
+    return t
+
+
 def tok_match(a: str, b: str) -> bool:
     """Exact for tokens of 5 characters or fewer; for longer ones ~80% similar AND the same first letter (speech-to-text
     spells words inconsistently, but "kabhi" (never) must not match "abhi" (now), and the Marathi "आत्ता" (now)
     must not match "आत्ताच" (right now, a pressure phrase))."""
     if a == b:
         return True
+    if min(len(a), len(b)) >= 5 and a[0] == b[0] and stem(a) == stem(b):
+        return True                                   # inflections of the same word
     if min(len(a), len(b)) <= 5 or a[0] != b[0]:
         return False
     return 1 - lev(a, b) / max(len(a), len(b)) >= 0.8
+
+
+def apply_slips(tokens: list[Token], slips, window: int = 3) -> list[Token]:
+    """Read known speech-to-text slips as the word that was probably meant, when a neighbour word backs it up.
+    Positions and character spans are kept, so evidence still quotes what was actually said."""
+    out = list(tokens)
+    for idx, t in enumerate(tokens):
+        for heard, meant, neighbours in slips:
+            if t.norm == heard:
+                around = {x.norm for x in tokens[max(0, idx - window):idx]} | {x.norm for x in tokens[idx + 1:idx + 1 + window]}
+                if around & neighbours:
+                    out[idx] = Token(meant, t.start, t.end)
+                    break
+    return out
 
 
 @dataclass(frozen=True)
@@ -107,6 +139,16 @@ def find_matches(tokens: list[Token], compiled) -> list[Match]:
         for i in range(n - L + 1):
             if all(tok_match(tokens[i + k].norm, toks[k]) for k in range(L)):
                 found.append(Match(i, i + L - 1, text))
+    # words that the speech-to-text split or joined differently ("pass word" / "password", "any desk" / "anydesk")
+    for toks, text in compiled:
+        target = "".join(toks)
+        if len(target) < 7 or not target.isascii():
+            continue
+        L = len(toks)
+        for k in {max(1, L - 1), L + 1} - {L}:
+            for i in range(n - k + 1):
+                if "".join(t.norm for t in tokens[i:i + k]) == target:
+                    found.append(Match(i, i + k - 1, text))
     found.sort(key=lambda m: (-(m.j - m.i), m.i))
     kept, used = [], set()
     for m in found:

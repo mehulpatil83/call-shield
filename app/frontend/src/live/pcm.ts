@@ -41,3 +41,12 @@ export function frames(buffer: ArrayBuffer, size: number): ArrayBuffer[] {
   for (let i = 0; i < buffer.byteLength; i += size) out.push(buffer.slice(i, Math.min(i + size, buffer.byteLength)))
   return out
 }
+
+/** Loudness of a PCM16 chunk: root-mean-square on a 0..1 scale (speech is typically 0.03 to 0.3). */
+export function rmsOfPcm16(buf: ArrayBuffer): number {
+  const ints = new Int16Array(buf.slice(0, buf.byteLength - (buf.byteLength % 2)))
+  if (ints.length === 0) return 0
+  let sum = 0
+  for (let i = 0; i < ints.length; i++) { const v = ints[i] / 32768; sum += v * v }
+  return Math.sqrt(sum / ints.length)
+}

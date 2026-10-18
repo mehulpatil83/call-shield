@@ -3,7 +3,8 @@
 Levels
   high      something is being requested (OTP, PIN/password, money, remote access) AND there is pressure,
             an authority claim or a KYC pretext around it
-  elevated  something sensitive is requested without other cues, OR two different pressure tactics appear
+  elevated  something sensitive is requested without other cues, OR two different pressure tactics appear,
+            OR a problem with your account is reported together with a claim of authority or an identity check (the opening of a fake fraud-department call)
   low       otherwise
 "Never share your OTP" style wording is treated as a warning, not a request.
 """
@@ -12,11 +13,11 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 
 from . import lexicon as L
-from .normalize import DigitRun, Match, Token, compile_phrases, find_digit_runs, find_matches, tokenize
+from .normalize import DigitRun, Match, Token, apply_slips, compile_phrases, find_digit_runs, find_matches, tokenize
 
 REQUEST_CATS = {"otp_request", "credential_request", "payment_request", "remote_access"}
 PRESSURE_CATS = {"urgency", "threat", "secrecy", "verification_bypass"}
-CONTEXT_CATS = {"authority", "kyc_pretext"}
+CONTEXT_CATS = {"authority", "kyc_pretext", "account_alert"}
 WINDOW = 6          # tokens either side of a sensitive term that count as "near"
 SECRECY_WINDOW = 8
 
@@ -63,7 +64,8 @@ def _near(a: Match, b: Match, window: int) -> bool:
 
 def detect(text: str, source: str = "") -> tuple[list[Hit], list[DigitRun], list[Token]]:
     toks = tokenize(text)
-    m = {k: find_matches(toks, v) for k, v in _C.items()}
+    heard = apply_slips(toks, L.STT_SLIPS)           # same positions and spans, known speech-to-text slips read as meant
+    m = {k: find_matches(heard, v) for k, v in _C.items()}
     # a phrase like "do not hang up" is a scammer's instruction, not cautionary wording: it must not cancel a request
     strong_secrecy = [x for x in m["secrecy"] if any(_near(x, t, 4) for t in m["this"])]
     instructions = m["verification_bypass"] + strong_secrecy
@@ -123,6 +125,8 @@ def score_hits(hits: list[Hit]) -> tuple[str, float]:
         return "high", score
     if req or len(pressure) >= 2:
         return "elevated", score
+    if {"authority", "account_alert"} <= context or {"kyc_pretext", "account_alert"} <= context:
+        return "elevated", score          # "from your bank, suspicious activity" / "suspicious activity, verify your identity": the classic opening
     return "low", score
 
 

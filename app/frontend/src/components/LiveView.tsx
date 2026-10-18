@@ -14,7 +14,7 @@ interface Props {
 /** Presentational part of the live check: meter, alert, evidence and transcript. */
 export default function LiveView({ t, state, onOpenReport, onAgain, advice = false }: Props) {
   const l = t.live
-  const status = { idle: '', connecting: l.connecting, waiting: t.call.waitingSpeaker, joined: t.call.speakerJoined, live: l.listening, stopping: l.stopping, ended: '', error: '' }[state.status]
+  const status = { idle: '', connecting: l.connecting, waiting: t.call.waitingSpeaker, joined: t.call.speakerJoined, live: l.listening, reconnecting: t.call.reconnecting, stopping: l.stopping, ended: '', error: '' }[state.status]
   const limit = state.warning?.startsWith('limit:') ? Number(state.warning.slice(6)) : null
   return (
     <section className="card" aria-live="polite">

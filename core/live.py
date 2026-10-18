@@ -76,6 +76,15 @@ class LiveSession:
                 await t.client.send_audio(frame)
         return self.seconds < LIVE_MAX_SECONDS
 
+    async def keepalive(self) -> None:
+        """One frame of silence for the speech-to-text streams, NOT added to the stored audio. Used while the phone
+        reconnects, so the streams stay open and are not closed for being idle."""
+        if self.closed:
+            return
+        for t in self.tracks:
+            with contextlib.suppress(Exception):
+                await t.client.send_audio(bytes(FRAME_BYTES))
+
     @property
     def seconds(self) -> float:
         return len(self.pcm) / 2 / SAMPLE_RATE

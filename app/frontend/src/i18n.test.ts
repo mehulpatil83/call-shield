@@ -2,7 +2,7 @@ import { STRINGS, categoryText } from './i18n'
 
 const KNOWN_CATEGORIES = [
   'otp_request', 'credential_request', 'payment_request', 'remote_access', 'urgency', 'threat', 'secrecy',
-  'verification_bypass', 'authority', 'kyc_pretext', 'warning_otp', 'warning_cred',
+  'verification_bypass', 'authority', 'kyc_pretext', 'account_alert', 'warning_otp', 'warning_cred',
 ]
 
 describe('translations', () => {

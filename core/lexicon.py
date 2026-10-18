@@ -9,6 +9,8 @@ To extend: add a phrase to the right list. Run `python -m pytest tests` afterwar
 # ---- sensitive things a scammer asks for ---------------------------------------------------------
 OTP_TERMS = [
     "otp", "o t p", "saha anki code", "saha ankhi code", "one time password", "one time pin", "verification code", "security code",
+    "one time code", "authorization token", "authorization code", "authentication code", "verification token",
+    "security token", "secure token", "confirmation code", "auth code",
     "six digit code", "6 digit code", "six digit otp", "6 digit otp", "six digit pin", "passcode",
     "ओटीपी", "ओ टी पी", "ओटिपी", "वन टाइम पासवर्ड", "सिक्स डिजिट कोड", "सिक्स डिजिट ओटीपी", "छह अंकों का कोड",
     "सहा अंकी कोड", "सहा अंकी ओटीपी", "वेरिफिकेशन कोड",
@@ -58,7 +60,8 @@ CATEGORIES = {
             "transfer of", "process a transfer", "process an urgent transfer", "transfer the money", "send the money",
             "send money", "make the payment", "make a payment", "pay the fine", "pay a fine", "pay the amount",
             "payment link", "click the link", "click on the link", "upi link", "gift card", "gift cards",
-            "processing fee", "send the amount",
+            "processing fee", "send the amount", "clearance fee", "customs fee", "safe account", "secure account number",
+            "move your money", "move your funds", "transfer your funds", "transfer your savings", "transfer your balance",
             "paise bhejiye", "paise bhejo", "paise transfer", "payment karo", "payment kijiye", "link par click",
             "link bhej raha", "amount bhejiye", "upi se bhejo",
             "पैसे भेजो", "पैसे भेजिए", "पेमेंट करो", "लिंक पर क्लिक", "पैसे ट्रांसफर", "पैसे ट्रांसफर करो",
@@ -140,7 +143,8 @@ CATEGORIES = {
             "vibhag se bol raha", "vibhag se bol rahi", "bijli vibhag", "विभाग से बोल रहा", "विभाग से बोल रही",
             "bankentun bolatoy", "bankentun bolto", "bankentun bolte", "bankentun", "vij vitaran",
             "from your bank", "from the bank", "calling from your bank", "bank security department",
-            "security department", "fraud department", "bank manager", "customer care executive", "rbi",
+            "security department", "fraud department", "fraud prevention", "fraud team", "security team", "security desk",
+            "bank's security", "bank manager", "customer care executive", "rbi",
             "reserve bank of india", "cyber crime", "cyber cell", "income tax department", "customs department",
             "microsoft", "windows support", "technical support", "electricity board", "electricity office",
             "i am the cfo", "i'm the cfo", "this is the ceo", "i am the ceo", "i'm the ceo",
@@ -155,10 +159,42 @@ CATEGORIES = {
         "explain": "Uses a KYC (identity update) pretext, a very common opening in bank scams.",
         "phrases": [
             "kyc", "know your customer", "update your kyc", "kyc update", "kyc expired",
+            "verify your identity", "confirm your identity", "identity verification", "verify your details", "confirm your details",
+            "verify your account", "verify your information",
             "केवायसी", "केवाईसी", "के वाई सी", "के वाय सी", "के वायसी",
         ],
     },
 }
+
+
+# A pretext: "there is a problem with your account / card" (or a refund or prize), the usual opening of a fake fraud-department call.
+# On its own it does not raise the level (real banks also call about odd transactions); see rules.score_hits.
+CATEGORIES["account_alert"] = {
+    "kind": "context",
+    "explain": "Claims there is a problem with your account or card (suspicious activity, unauthorised charges), or offers a refund or prize, to get you to act.",
+    "phrases": [
+        "suspicious activity", "suspicious transaction", "suspicious transactions", "suspicious login", "unusual activity",
+        "unauthorised charge", "unauthorised charges", "unauthorised transaction", "unauthorised transactions",
+        "unauthorised payment", "unauthorised payments", "unauthorised access", "unauthorised withdrawal",
+        "fraudulent charge", "fraudulent charges", "fraudulent transaction", "fraudulent transactions", "fraudulent activity",
+        "account has been compromised", "account is compromised", "has been compromised", "has been hacked", "is being hacked",
+        "holding this transaction", "holding the transaction", "holding these charges", "hold on your account", "hold on your card",
+        "card ending", "account ending", "reverse the charges", "reverse the same charges", "reverse the transaction",
+        "cancel the transaction", "cancel the payment", "secure your account", "protect your funds", "protect your money",
+        "your refund", "processing your refund", "claim your refund", "you have won", "you won", "lottery", "winning amount",
+    ],
+}
+
+# ---- speech-to-text slips -------------------------------------------------------------------------------------
+# (heard, meant, neighbour words). A heard word is read as the meant word only when one of the neighbour words is within
+# 3 words of it, so ordinary uses ("a flat in Pune") are left alone. The report still quotes what was actually heard.
+# "diverse" and "flat" were seen in a real test call; "pen" is a plausible slip that has not been seen yet.
+# Add to this list from your own transcripts. Dropped words cannot be recovered.
+STT_SLIPS = [
+    ("diverse", "reverse", {"charge", "charges", "transaction", "transactions", "payment", "payments", "same", "these"}),
+    ("flat", "flagged", {"unauthorised", "unauthorized", "suspicious", "charges", "transaction", "transactions", "payment"}),
+    ("pen", "pin", {"atm", "upi", "debit", "card", "number"}),
+]
 
 # ---- how each request / warning is explained in the report ---------------------------------------------
 REQUEST_EXPLAIN = {
