@@ -7,6 +7,14 @@ transcript and "what to do now". The phone shows a plain call screen and never a
 * **Phone (Speaker):** call timer, a microphone level bar, a warning if nothing has been heard for 8 seconds (not shown while muted), mute and end buttons. If the connection drops or the screen locks it says so and keeps trying to rejoin the same call for 60 seconds. After a page reload it offers a "Rejoin the call" button.
 * **Laptop (Receiver):** risk meter, alert, highlighted evidence, transcript, "what to do now", a "Receiving audio" indicator with a level bar (it warns if no audio arrives for 3 seconds, or only silence for 5), and a banner while the phone is reconnecting.
 
+## Alert experience (laptop)
+* **Elevated risk:** an amber banner and one soft beep.
+* **High risk:** a full-screen red warning with the top three pieces of advice, the strongest evidence quotes (requests first; cautionary wording is never shown as evidence), a short siren, and the advice spoken aloud in the interface language (English, Hindi or Marathi). The browser tab title also flashes "SCAM WARNING" so it is noticeable from another tab.
+* It fires once per step up (elevated, then high) per call, and again for the next call. Dismiss it with the button or Escape. It closes by itself when the call ends so it never covers the report.
+* **Alert settings** (a panel above the meter, remembered in the browser): Beep, Speak the advice aloud, Full-screen warning.
+* Nothing is downloaded: the siren is generated and the speech uses the browser's own voices. If the device has no voice for Hindi or Marathi, the advice stays on screen and the page says so; Marathi falls back to a Hindi voice if one is installed.
+* **Same-room warning:** if the phone is next to the laptop, its microphone can pick up the spoken alert and send it back into the analysis. Use headphones, keep the phone in another room, or switch Speak off. The slow pulse animation is skipped for people who set "reduce motion".
+
 ## How it works
 ```
 phone browser --(wss, PCM16 16 kHz)--> Cloudflare tunnel --> 127.0.0.1:8000 (this laptop)

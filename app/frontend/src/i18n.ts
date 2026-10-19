@@ -22,6 +22,22 @@ export interface LiveText {
   spotted: string
   warningNote: string
 }
+export interface AlertText {
+  headline: string
+  subline: string
+  elevated: string
+  dismiss: string
+  repeat: string
+  settings: string
+  sound: string
+  voice: string
+  fullscreen: string
+  echoNote: string
+  noVoice: string
+  heard: string
+  spoken: string
+  titleFlash: string
+}
 export interface CallText {
   nav: string
   title: string
@@ -86,6 +102,8 @@ export interface SpeakerText {
   noteSingle: string
 }
 export interface Dict {
+  code: 'en' | 'hi' | 'mr'
+  alert: AlertText
   speakers: SpeakerText
   nav: { upload: string; live: string; call: string }
   live: LiveText
@@ -164,6 +182,22 @@ const en: Dict = {
     noteChannels: 'Speakers were separated using the two stereo channels.',
     noteSingle: 'Only one speaker was detected, so this is the same as a normal analysis.',
   },
+  alert: {
+    headline: 'यह कॉल ठगी जैसी लगती है',
+    subline: 'कोई कोड, पिन, पासवर्ड या भुगतान की जानकारी न बताएँ।',
+    elevated: 'सावधान: इस कॉल में खतरे के संकेत हैं। जाँच किए बिना कोई कोड या पैसा न दें।',
+    dismiss: 'समझ गया',
+    repeat: 'फिर से सुनाएँ',
+    settings: 'अलर्ट सेटिंग',
+    sound: 'बीप',
+    voice: 'सलाह बोलकर सुनाएँ',
+    fullscreen: 'पूरी स्क्रीन की चेतावनी',
+    echoNote: 'अगर फ़ोन उसी कमरे में है तो वह बोला गया अलर्ट पकड़ सकता है। हेडफ़ोन लगाएँ, या फ़ोन को दूसरे कमरे में रखें।',
+    noVoice: 'इस डिवाइस पर इस भाषा की आवाज़ इंस्टॉल नहीं है, इसलिए सलाह केवल स्क्रीन पर दिखेगी।',
+    heard: 'क्या सुना गया',
+    spoken: 'सावधान। यह कॉल ठगी जैसी लगती है। कोई कोड या भुगतान की जानकारी न बताएँ। फ़ोन काट दें और अपने कार्ड के पीछे छपे नंबर पर बैंक को कॉल करें।',
+    titleFlash: 'ठगी की चेतावनी',
+  },
   nav: { upload: 'Upload a recording', live: 'Live check', call: 'Receive a call' },
   call: {
     nav: 'Receive a call',
@@ -236,6 +270,7 @@ const en: Dict = {
     spotted: 'Spotted so far',
     warningNote: 'A speech-recognition stream reported a problem; the check continues.',
   },
+  code: 'en',
   appName: 'call-shield',
   tagline: 'Check a call recording for scam tactics and for signs of a synthetic voice.',
   privacy: 'Analysis runs on this computer. Recordings are kept only in the local data folder and you can delete them here at any time.',
@@ -361,6 +396,22 @@ const hi: Dict = {
     noteChannels: 'वक्ताओं को दो स्टीरियो चैनलों से अलग किया गया।',
     noteSingle: 'सिर्फ़ एक वक्ता मिला, इसलिए यह सामान्य जाँच जैसा ही है।',
   },
+  alert: {
+    headline: 'हा कॉल फसवणुकीसारखा वाटतो',
+    subline: 'कोणताही कोड, पिन, पासवर्ड किंवा पेमेंटची माहिती सांगू नका.',
+    elevated: 'सावध रहा: या कॉलमध्ये धोक्याची चिन्हे आहेत. तपासल्याशिवाय कोणताही कोड किंवा पैसे देऊ नका.',
+    dismiss: 'समजले',
+    repeat: 'पुन्हा सांगा',
+    settings: 'अलर्ट सेटिंग',
+    sound: 'बीप',
+    voice: 'सल्ला मोठ्याने सांगा',
+    fullscreen: 'पूर्ण स्क्रीन इशारा',
+    echoNote: 'फोन त्याच खोलीत असेल तर तो बोललेला अलर्ट पकडू शकतो. हेडफोन वापरा, किंवा फोन दुसऱ्या खोलीत ठेवा.',
+    noVoice: 'या डिव्हाइसवर या भाषेचा आवाज इन्स्टॉल केलेला नाही, म्हणून सल्ला फक्त स्क्रीनवर दिसेल.',
+    heard: 'काय ऐकले गेले',
+    spoken: 'सावधान. हा कॉल फसवणुकीसारखा वाटतो. कोणताही कोड किंवा पेमेंट तपशील सांगू नका. फोन कट करा आणि कार्डच्या मागे छापलेल्या नंबरवर बँकेला कॉल करा.',
+    titleFlash: 'फसवणुकीचा इशारा',
+  },
   nav: { upload: 'रिकॉर्डिंग अपलोड करें', live: 'लाइव जाँच', call: 'कॉल रिसीव करें' },
   call: {
     nav: 'कॉल रिसीव करें',
@@ -433,6 +484,7 @@ const hi: Dict = {
     spotted: 'अब तक मिले संकेत',
     warningNote: 'स्पीच पहचान स्ट्रीम में समस्या आई; जाँच जारी है।',
   },
+  code: 'hi',
   appName: 'call-shield',
   tagline: 'किसी कॉल रिकॉर्डिंग में ठगी के तरीकों और नकली (सिंथेटिक) आवाज़ के संकेतों की जाँच करें।',
   privacy: 'विश्लेषण इसी कंप्यूटर पर चलता है। रिकॉर्डिंग सिर्फ़ स्थानीय डेटा फ़ोल्डर में रहती हैं और आप उन्हें यहीं से कभी भी हटा सकते हैं।',
@@ -557,6 +609,22 @@ const mr: Dict = {
     noteChannels: 'वक्ते दोन स्टीरिओ चॅनेल वापरून वेगळे केले.',
     noteSingle: 'फक्त एकच वक्ता आढळला, त्यामुळे हे सामान्य तपासणीसारखेच आहे.',
   },
+  alert: {
+    headline: 'हा कॉल फसवणुकीसारखा वाटतो',
+    subline: 'कोणताही कोड, पिन, पासवर्ड किंवा पेमेंटची माहिती सांगू नका.',
+    elevated: 'सावध रहा: या कॉलमध्ये धोक्याची चिन्हे आहेत. तपासल्याशिवाय कोणताही कोड किंवा पैसे देऊ नका.',
+    dismiss: 'समजले',
+    repeat: 'पुन्हा सांगा',
+    settings: 'अलर्ट सेटिंग',
+    sound: 'बीप',
+    voice: 'सल्ला मोठ्याने सांगा',
+    fullscreen: 'पूर्ण स्क्रीन इशारा',
+    echoNote: 'फोन त्याच खोलीत असेल तर तो बोललेला अलर्ट पकडू शकतो. हेडफोन वापरा, किंवा फोन दुसऱ्या खोलीत ठेवा.',
+    noVoice: 'या डिव्हाइसवर या भाषेचा आवाज इन्स्टॉल केलेला नाही, म्हणून सल्ला फक्त स्क्रीनवर दिसेल.',
+    heard: 'काय ऐकले गेले',
+    spoken: 'सावधान. हा कॉल फसवणुकीसारखा वाटतो. कोणताही कोड किंवा पेमेंट तपशील सांगू नका. फोन कट करा आणि कार्डच्या मागे छापलेल्या नंबरवर बँकेला कॉल करा.',
+    titleFlash: 'फसवणुकीचा इशारा',
+  },
   nav: { upload: 'रेकॉर्डिंग अपलोड करा', live: 'लाइव तपासणी', call: 'कॉल स्वीकारा' },
   call: {
     nav: 'कॉल स्वीकारा',
@@ -629,6 +697,7 @@ const mr: Dict = {
     spotted: 'आतापर्यंत आढळलेली चिन्हे',
     warningNote: 'स्पीच ओळख प्रवाहात समस्या आली; तपासणी सुरू आहे.',
   },
+  code: 'mr',
   appName: 'call-shield',
   tagline: 'कॉल रेकॉर्डिंगमध्ये फसवणुकीच्या पद्धती आणि कृत्रिम (सिंथेटिक) आवाजाची चिन्हे तपासा.',
   privacy: 'विश्लेषण याच संगणकावर होते. रेकॉर्डिंग फक्त स्थानिक डेटा फोल्डरमध्ये राहतात आणि तुम्ही त्या इथून कधीही हटवू शकता.',

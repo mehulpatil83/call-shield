@@ -13,6 +13,9 @@ const live: LiveState = {
 }
 
 describe('LiveView', () => {
+  // the alert experience has its own tests; here keep the page free of the full-screen warning, sound and speech
+  beforeEach(() => { localStorage.setItem('cs-alert', JSON.stringify({ sound: false, voice: false, fullscreen: false })) })
+  afterEach(() => { localStorage.clear() })
   it('shows the meter, alert, evidence and highlighted transcript', () => {
     render(<LiveView t={STRINGS.en} state={live} onOpenReport={() => {}} onAgain={() => {}} />)
     expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '8')

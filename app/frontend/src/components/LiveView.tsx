@@ -1,5 +1,7 @@
 import { splitTranscript } from '../highlight'
 import { categoryText, type Dict } from '../i18n'
+import AlertOverlay from '../alert/AlertOverlay'
+import { useAlertExperience } from '../alert/useAlertExperience'
 import type { LiveState } from '../live/state'
 
 interface Props {
@@ -14,10 +16,13 @@ interface Props {
 /** Presentational part of the live check: meter, alert, evidence and transcript. */
 export default function LiveView({ t, state, onOpenReport, onAgain, advice = false }: Props) {
   const l = t.live
+  const ax = useAlertExperience(t, state)
   const status = { idle: '', connecting: l.connecting, waiting: t.call.waitingSpeaker, joined: t.call.speakerJoined, live: l.listening, reconnecting: t.call.reconnecting, stopping: l.stopping, ended: '', error: '' }[state.status]
   const limit = state.warning?.startsWith('limit:') ? Number(state.warning.slice(6)) : null
   return (
     <section className="card" aria-live="polite">
+      <AlertOverlay t={t} state={state} shown={ax.shown} settings={ax.settings} voice={ax.voice}
+                    onDismiss={ax.dismiss} onRepeat={ax.repeat} onChange={ax.change} />
       {status && <p className="big" data-testid="live-status">{status} {state.seconds > 0 && <span className="mut">{Math.round(state.seconds)}s</span>}</p>}
 
       {state.alert && (

@@ -81,3 +81,23 @@ input[type='url'], input[type='text'], .code-input { font: inherit; padding: 8px
 .levelbar.small { margin: 8px 0; max-width: 260px; height: 10px; }
 .levelfill { height: 100%; background: var(--accent); transition: width .12s linear; }
 .audio-status { margin: 6px 0 10px; }
+
+/* alert experience: slow pulse only (under 1 Hz), none for people who asked for reduced motion */
+.ax-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: #9b0000; color: #fff; overflow-y: auto; }
+.ax-card { max-width: 680px; width: 100%; text-align: center; }
+.ax-icon { font-size: 4rem; margin: 0; line-height: 1; }
+.ax-card h2 { font-size: 2.1rem; margin: 8px 0; }
+.ax-sub { font-size: 1.25rem; margin: 6px 0 14px; }
+.ax-advice { text-align: left; font-size: 1.1rem; margin: 10px auto; max-width: 560px; }
+.ax-evidence { background: rgba(0, 0, 0, .25); border-radius: 10px; padding: 8px 14px; margin: 12px auto; max-width: 560px; text-align: left; }
+.ax-evidence ul { margin: 4px 0; padding-left: 1.1rem; } .ax-evidence span { opacity: .85; font-size: .9rem; } .ax-label { margin: 0; font-weight: 700; }
+.ax-note { font-size: .9rem; opacity: .95; }
+.ax-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+.ax-button { font: inherit; font-size: 1.1rem; min-height: 48px; padding: 8px 22px; border-radius: 10px; border: 2px solid #fff; background: transparent; color: #fff; cursor: pointer; }
+.ax-button.primary { background: #fff; color: #7a0000; font-weight: 700; } .ax-button:focus-visible { outline: 3px solid #ffd54f; outline-offset: 3px; }
+@media (prefers-reduced-motion: no-preference) { .ax-card { animation: ax-pulse 2.4s ease-in-out infinite; } }
+@keyframes ax-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.015); } }
+.ax-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 10px; margin-bottom: 10px; color: #fff; font-weight: 600; }
+.ax-banner.high { background: var(--high); } .ax-banner.elevated { background: #b45309; }
+.ax-close { font: inherit; font-size: 1.4rem; background: transparent; border: 0; color: inherit; cursor: pointer; padding: 0 8px; }
+.ax-settings { margin: 6px 0 10px; } .ax-settings summary { cursor: pointer; color: var(--mut); }
