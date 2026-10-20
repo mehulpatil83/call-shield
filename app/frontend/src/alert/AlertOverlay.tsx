@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { categoryText, type Dict } from '../i18n'
 import type { LiveState } from '../live/state'
+import type { Hit } from '../types'
 import type { SpeakResult } from './alertDeps'
 import type { AlertSettings } from './useAlertExperience'
 
@@ -15,6 +16,28 @@ interface Props {
   onChange: (patch: Partial<AlertSettings>) => void
 }
 
+/** The strongest evidence first: requests, then pressure, then context; one per kind of tactic. Cautions are not evidence. */
+export function topEvidence(hits: Hit[], n = 3): Hit[] {
+  const rank: Record<string, number> = { request: 0, pressure: 1, context: 2 }
+  const seen = new Set<string>()
+  return [...hits].filter((h) => h.kind !== 'warning').sort((x, y) => rank[x.kind] - rank[y.kind])
+    .filter((h) => (seen.has(h.category) ? false : (seen.add(h.category), true))).slice(0, n)
+}
+
+/** The three alert switches and the echo warning. */
+export function AlertSettingsPanel({ t, settings, onChange, fullscreenLabel }: { t: Dict; settings: AlertSettings; onChange: (patch: Partial<AlertSettings>) => void; fullscreenLabel?: string }) {
+  const a = t.alert
+  return (
+    <details className="ax-settings">
+      <summary>{a.settings}</summary>
+      <label className="check"><input type="checkbox" checked={settings.sound} onChange={(e) => onChange({ sound: e.target.checked })} /><span>{a.sound}</span></label>
+      <label className="check"><input type="checkbox" checked={settings.voice} onChange={(e) => onChange({ voice: e.target.checked })} /><span>{a.voice}</span></label>
+      <label className="check"><input type="checkbox" checked={settings.fullscreen} onChange={(e) => onChange({ fullscreen: e.target.checked })} /><span>{fullscreenLabel ?? a.fullscreen}</span></label>
+      <p className="mut"><small>{a.echoNote}</small></p>
+    </details>
+  )
+}
+
 /** Full-screen red warning at high risk, an amber banner at elevated risk, and the alert settings. */
 export default function AlertOverlay({ t, state, shown, settings, voice, onDismiss, onRepeat, onChange }: Props) {
   const a = t.alert
@@ -26,11 +49,7 @@ export default function AlertOverlay({ t, state, shown, settings, voice, onDismi
     return () => window.removeEventListener('keydown', onKey)
   }, [overlay, onDismiss])
 
-  // the strongest evidence first: requests, then pressure, then context; one per kind of tactic
-  const rank: Record<string, number> = { request: 0, pressure: 1, context: 2 }
-  const seen = new Set<string>()
-  const evidence = [...state.hits].filter((h) => h.kind !== 'warning').sort((x, y) => rank[x.kind] - rank[y.kind])
-    .filter((h) => (seen.has(h.category) ? false : (seen.add(h.category), true))).slice(0, 3)
+  const evidence = topEvidence(state.hits)
 
   return (
     <>
@@ -61,13 +80,7 @@ export default function AlertOverlay({ t, state, shown, settings, voice, onDismi
           <button type="button" className="ax-close" onClick={onDismiss} aria-label={a.dismiss}>×</button>
         </div>
       )}
-      <details className="ax-settings">
-        <summary>{a.settings}</summary>
-        <label className="check"><input type="checkbox" checked={settings.sound} onChange={(e) => onChange({ sound: e.target.checked })} /><span>{a.sound}</span></label>
-        <label className="check"><input type="checkbox" checked={settings.voice} onChange={(e) => onChange({ voice: e.target.checked })} /><span>{a.voice}</span></label>
-        <label className="check"><input type="checkbox" checked={settings.fullscreen} onChange={(e) => onChange({ fullscreen: e.target.checked })} /><span>{a.fullscreen}</span></label>
-        <p className="mut"><small>{a.echoNote}</small></p>
-      </details>
+      <AlertSettingsPanel t={t} settings={settings} onChange={onChange} />
     </>
   )
 }

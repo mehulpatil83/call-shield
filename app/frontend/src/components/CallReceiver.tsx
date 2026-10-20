@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import * as api from '../api'
+import CallConsole from '../console/CallConsole'
+import PresenterDrawer from '../console/PresenterDrawer'
 import type { Dict } from '../i18n'
 import { type ReceiverDeps, useCallReceiver } from '../call/useCallReceiver'
 import type { SpeechLang } from '../types'
-import LiveView from './LiveView'
 import QrCode from './QrCode'
 
 interface Props {
@@ -13,7 +14,7 @@ interface Props {
   loadConfig?: () => Promise<{ public_url: string | null }>
 }
 
-/** Receiver screen (this computer): start a call, show the code and QR for the phone, then the live check. */
+/** Receiver screen (this computer): start a call, show the code and QR for the phone, then the call console. */
 export default function CallReceiver({ t, onOpenReport, deps, loadConfig = api.callConfig }: Props) {
   const { state, info, listening, audio, start, setListen, end, reset } = useCallReceiver(deps)
   const c = t.call
@@ -34,8 +35,18 @@ export default function CallReceiver({ t, onOpenReport, deps, loadConfig = api.c
     void start(language, skipAudio, publicUrl.trim() || null)
   }
   const idle = state.status === 'idle'
-  const inCall = state.status === 'live' || state.status === 'reconnecting' || state.status === 'stopping'
   const waiting = state.status === 'waiting' || state.status === 'joined' || (state.status === 'connecting' && info !== null)
+  const inConsole = info !== null && ['live', 'reconnecting', 'stopping', 'ended', 'error'].includes(state.status)
+
+  // once the call is running: the call console (live analysis + phone simulation) takes the whole width
+  if (inConsole) {
+    return (
+      <div className="console-wrap">
+        <CallConsole t={t} state={state} language={(info!.language as SpeechLang) ?? language} listening={listening} audio={audio}
+                     onListen={setListen} onEnd={end} onAgain={reset} onOpenReport={onOpenReport} />
+      </div>
+    )
+  }
 
   return (
     <>
@@ -67,60 +78,28 @@ export default function CallReceiver({ t, onOpenReport, deps, loadConfig = api.c
             <div className="toolbar">
               <button type="button" className="button primary" disabled={!consent} onClick={begin}>{c.start}</button>
             </div>
+            <PresenterDrawer t={t} />
           </>
         )}
         {state.status === 'error' && !info && <p className="notice warn" role="alert" data-testid="call-error">{state.message}</p>}
       </section>
 
-      {info && (waiting || inCall) && (
+      {info && waiting && (
         <section className="card call-share" aria-live="polite">
-          {waiting && (
-            <>
-              <p className="big" data-testid="call-status">{state.status === 'joined' ? c.speakerJoined : c.waitingSpeaker}</p>
-              <p>{c.scan}</p>
-              <div className="share-row">
-                {info.join_url && <QrCode value={info.join_url} label={c.joinAddress} />}
-                <div>
-                  <p className="mut">{c.codeLabel}</p>
-                  <p className="code" data-testid="call-code">{info.code}</p>
-                  {info.join_url ? <p className="filename"><small>{c.joinAddress}: <code data-testid="call-join-url">{info.join_url}</code></small></p>
-                                 : <p className="notice">{c.noTunnel}</p>}
-                  <p className="mut"><small>{c.expires(Math.round(info.expires_in / 60))}</small></p>
-                </div>
-              </div>
-              <div className="toolbar"><button type="button" className="button secondary" onClick={end}>{c.cancel}</button></div>
-            </>
-          )}
-          {inCall && (
-            <>
-              {state.status === 'reconnecting' ? (
-                <p className="notice warn" role="status" data-testid="call-reconnecting">{c.receiverReconnecting(60)}</p>
-              ) : (
-                <div className="audio-status" data-testid="call-audio" data-state={audio.state}>
-                  <div className="levelbar small" role="meter" aria-label={c.audioLevelLabel} aria-valuemin={0} aria-valuemax={100}
-                       aria-valuenow={Math.round(audio.level * 100)}>
-                    <div className="levelfill" style={{ width: `${Math.round(audio.level * 100)}%` }} />
-                  </div>
-                  <p className={audio.state === 'ok' ? 'mut' : 'notice warn'} role="status">
-                    {audio.state === 'ok' ? c.receivingAudio : audio.state === 'silent' ? c.audioSilent : c.audioNone}
-                  </p>
-                </div>
-              )}
-              <label className="check">
-                <input type="checkbox" checked={listening} onChange={(e) => setListen(e.target.checked)} />
-                <span>{c.listen}</span>
-              </label>
-              <p className="mut"><small>{c.listenHint}</small></p>
-              <div className="toolbar">
-                <button type="button" className="button danger" disabled={state.status === 'stopping'} onClick={end}>{c.end}</button>
-              </div>
-            </>
-          )}
+          <p className="big" data-testid="call-status">{state.status === 'joined' ? c.speakerJoined : c.waitingSpeaker}</p>
+          <p>{c.scan}</p>
+          <div className="share-row">
+            {info.join_url && <QrCode value={info.join_url} label={c.joinAddress} />}
+            <div>
+              <p className="mut">{c.codeLabel}</p>
+              <p className="code" data-testid="call-code">{info.code}</p>
+              {info.join_url ? <p className="filename"><small>{c.joinAddress}: <code data-testid="call-join-url">{info.join_url}</code></small></p>
+                             : <p className="notice">{c.noTunnel}</p>}
+              <p className="mut"><small>{c.expires(Math.round(info.expires_in / 60))}</small></p>
+            </div>
+          </div>
+          <div className="toolbar"><button type="button" className="button secondary" onClick={end}>{c.cancel}</button></div>
         </section>
-      )}
-
-      {(inCall || state.status === 'ended' || (state.status === 'error' && info !== null)) && (
-        <LiveView t={t} state={state} advice onOpenReport={onOpenReport} onAgain={reset} />
       )}
     </>
   )

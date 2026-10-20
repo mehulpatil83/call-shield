@@ -101,3 +101,64 @@ input[type='url'], input[type='text'], .code-input { font: inherit; padding: 8px
 .ax-banner.high { background: var(--high); } .ax-banner.elevated { background: #b45309; }
 .ax-close { font: inherit; font-size: 1.4rem; background: transparent; border: 0; color: inherit; cursor: pointer; padding: 0 8px; }
 .ax-settings { margin: 6px 0 10px; } .ax-settings summary { cursor: pointer; color: var(--mut); }
+
+/* call console: live analysis on the left, a phone call simulation on the right. Designed for a laptop screen. */
+.console-wrap { width: min(1480px, calc(100vw - 32px)); position: relative; left: 50%; transform: translateX(-50%); }
+.console { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(330px, .85fr); gap: 16px; align-items: start; }
+.console-left { display: grid; gap: 12px; min-width: 0; }
+.console-right { position: sticky; top: 12px; }
+.console h3 { margin: 0 0 8px; font-size: 1.05rem; }
+.console-head-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.live-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--high); } .live-dot.off { background: var(--neutral); }
+@media (prefers-reduced-motion: no-preference) { .live-dot:not(.off) { animation: ax-dot 1.6s ease-in-out infinite; } }
+@keyframes ax-dot { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+.timer-small { font-variant-numeric: tabular-nums; font-weight: 600; }
+.console-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.console-pair .card { margin: 0; }
+.wants { margin: 4px 0; padding-left: 1.2rem; font-weight: 600; }
+.tactics { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.tactic { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); color: var(--mut); font-size: .9rem; }
+.tactic.on { color: #fff; border-color: transparent; font-weight: 600; }
+.tactic.on.request { background: var(--high); } .tactic.on.pressure { background: var(--elevated); } .tactic.on.context { background: #6d4c41; }
+.timeline { list-style: none; padding: 0; margin: 6px 0; display: grid; gap: 6px; }
+.tl-item { width: 100%; text-align: left; font: inherit; color: inherit; background: var(--card); border: 1px solid var(--line); border-left-width: 6px; border-radius: 8px; padding: 6px 10px; cursor: pointer; display: flex; gap: 10px; align-items: baseline; }
+.tl-item.request, .tl-item.alert.high { border-left-color: var(--high); } .tl-item.pressure, .tl-item.alert.elevated { border-left-color: var(--elevated); } .tl-item.context { border-left-color: #6d4c41; }
+.tl-item.sel { outline: 3px solid var(--accent); outline-offset: 1px; } .tl-item:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+.tl-time { font-variant-numeric: tabular-nums; color: var(--mut); min-width: 3ch; }
+.why { border-left: 4px solid var(--accent); padding: 2px 12px; margin-top: 8px; } .why h4 { margin: 4px 0; }
+.details, .scorecard dl { display: grid; gap: 6px; margin: 0; } .details > div, .scorecard dl > div { display: grid; grid-template-columns: 220px 1fr; gap: 10px; } dt { color: var(--mut); } dd { margin: 0; }
+.presenter { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--card); } .presenter summary { cursor: pointer; font-weight: 600; }
+.script { border-top: 1px solid var(--line); padding: 6px 0; } .script h5 { margin: 4px 0; } .script p { margin: 4px 0 6px; }
+.graph-frame { position: relative; } .graph svg { width: 100%; height: auto; display: block; }
+.graph .gridline { stroke: var(--line); stroke-width: 1; } .graph .axis { fill: var(--mut); font-size: 11px; }
+.graph .seg { stroke-width: 3; stroke-linecap: round; } .graph .seg.low, .graph .pt.low { stroke: var(--low); fill: var(--low); } .graph .seg.elevated, .graph .pt.elevated { stroke: var(--elevated); fill: var(--elevated); } .graph .seg.high, .graph .pt.high { stroke: var(--high); fill: var(--high); }
+.graph .pt { stroke-width: 0; cursor: pointer; } .graph .pt:focus-visible { outline: none; stroke: var(--fg); stroke-width: 2; }
+.graph .area { opacity: .12; stroke: none; } .graph .area.low { fill: var(--low); } .graph .area.elevated { fill: var(--elevated); } .graph .area.high { fill: var(--high); }
+.graph .marker line { stroke-dasharray: 4 3; stroke-width: 1.5; } .graph .marker text { font-size: 11px; font-weight: 700; }
+.graph .marker.high line { stroke: var(--high); } .graph .marker.high text { fill: var(--high); } .graph .marker.elevated line { stroke: var(--elevated); } .graph .marker.elevated text { fill: var(--elevated); }
+.graph-tip { position: absolute; top: 4px; max-width: 320px; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); font-size: .85rem; pointer-events: none; }
+.graph-tip ul { margin: 4px 0 0; padding-left: 1rem; } .graph-tip .lvl.high { color: var(--high); font-weight: 700; } .graph-tip .lvl.elevated { color: var(--elevated); font-weight: 700; } .graph-tip .lvl.low { color: var(--low); font-weight: 700; }
+.graph-empty { padding: 30px 0; text-align: center; }
+/* the phone */
+.phone { width: min(100%, 370px); height: min(82vh, 760px); margin: 0 auto; border-radius: 46px; background: #0a0a0d; padding: 12px; box-shadow: 0 14px 44px rgba(0, 0, 0, .4); }
+.phone-screen { position: relative; height: 100%; border-radius: 36px; overflow: hidden; background: #12141b; color: #f2f3f7; display: flex; flex-direction: column; }
+.phone-status { display: flex; justify-content: space-between; padding: 12px 22px 6px; font-size: .8rem; opacity: .9; }
+.phone-risk { padding: 3px 14px; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #fff; transition: background .3s; }
+.phone-risk.low { background: #2e7d32; } .phone-risk.elevated { background: #b45309; } .phone-risk.high { background: #c62828; }
+.phone-strip { margin: 0; padding: 6px 14px; background: #b45309; color: #fff; font-size: .85rem; font-weight: 600; text-align: center; }
+.phone-caller { text-align: center; padding: 14px 12px 6px; }
+.phone-avatar { width: 68px; height: 68px; border-radius: 50%; background: #2a2e3a; display: grid; place-items: center; font-size: 2rem; margin: 0 auto 8px; }
+.phone-name { font-size: 1.3rem; font-weight: 600; } .phone-number { font-size: .85rem; opacity: .7; } .phone-time { margin-top: 4px; font-variant-numeric: tabular-nums; font-size: 1.05rem; }
+.phone-captions { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 16px; font-size: .95rem; line-height: 1.75; border-top: 1px solid #262a35; scroll-behavior: smooth; }
+.phone-wait { opacity: .6; text-align: center; } .phone-line { margin: 0 0 6px; } .phone-lang { opacity: .6; }
+.phone .mark { color: #fff; cursor: default; } .phone .mark.request { background: #8e2a2a; } .phone .mark.pressure { background: #8a5a14; } .phone .mark.context { background: #5d4037; } .phone .mark.warning { background: #2f6b34; }
+.phone .mark.focus { outline: 3px solid #ffd54f; outline-offset: 1px; }
+.phone-controls { display: flex; justify-content: center; gap: 36px; padding: 12px 0 22px; }
+.phone-btn { width: 62px; height: 62px; border-radius: 50%; border: 0; font-size: 1.4rem; background: #2a2e3a; color: #fff; cursor: pointer; }
+.phone-btn.on { background: #fff; } .phone-btn.end { background: #c62828; transform: rotate(135deg); } .phone-btn:disabled { opacity: .5; cursor: not-allowed; } .phone-btn:focus-visible { outline: 3px solid #ffd54f; outline-offset: 2px; }
+.phone-takeover { position: absolute; inset: 0; z-index: 5; background: #9b0000; color: #fff; padding: 36px 20px 20px; text-align: center; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.phone-takeover h3 { font-size: 1.5rem; margin: 4px 0; } .phone-takeover ul { text-align: left; margin: 6px 0; padding-left: 1.1rem; }
+.phone-evidence { background: rgba(0, 0, 0, .25); border-radius: 10px; padding: 8px 12px 8px 1.6rem !important; } .phone-evidence span { opacity: .85; font-size: .85rem; }
+@media (max-width: 1100px) { .console { grid-template-columns: 1fr; } .console-right { position: static; } .console-pair { grid-template-columns: 1fr; } }
+
+@media (max-height: 780px) { .phone-avatar { width: 46px; height: 46px; font-size: 1.4rem; margin-bottom: 4px; } .phone-number { display: none; } .phone-caller { padding-top: 6px; } .phone-controls { padding: 8px 0 14px; } .phone-btn { width: 54px; height: 54px; } }

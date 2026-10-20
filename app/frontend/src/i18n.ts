@@ -22,6 +22,64 @@ export interface LiveText {
   spotted: string
   warningNote: string
 }
+export interface ConsoleText {
+  live: string
+  ended: string
+  riskTitle: string
+  graphLabel: (level: string, score: number) => string
+  graphEmpty: string
+  axisNote: string
+  markerElevated: string
+  markerHigh: string
+  tipScore: (score: number) => string
+  noNewEvidence: string
+  wantsTitle: string
+  wantsNothing: string
+  wants: Record<string, string>
+  tacticsTitle: string
+  timelineTitle: string
+  timelineEmpty: string
+  timelineHint: string
+  alertFired: (level: string) => string
+  whyTitle: string
+  detailsTitle: string
+  duration: string
+  cost: string
+  costNote: string
+  engine: string
+  engineValue: string
+  voice: string
+  voiceValue: string
+  scorecardTitle: string
+  verdict: string
+  firstWarning: string
+  highAlert: string
+  firstAsk: string
+  notReached: string
+  after: (seconds: number) => string
+  peak: string
+  tacticsHeard: string
+  noTactics: string
+  timesNote: string
+  unknownCaller: string
+  unknownNumber: string
+  reconnectingPhone: string
+  callEnded: string
+  hangUp: string
+  speaker: string
+  phoneElevated: string
+  captionsTitle: string
+  captionsWaiting: string
+  takeoverLabel: string
+  presenterTitle: string
+  presenterIntro: string
+  scriptScam: string
+  scriptScamShort: string
+  scriptFriendly: string
+  scriptWarning: string
+  copy: string
+  copied: string
+}
 export interface AlertText {
   headline: string
   subline: string
@@ -104,6 +162,7 @@ export interface SpeakerText {
 export interface Dict {
   code: 'en' | 'hi' | 'mr'
   alert: AlertText
+  console: ConsoleText
   speakers: SpeakerText
   nav: { upload: string; live: string; call: string }
   live: LiveText
@@ -197,6 +256,64 @@ const en: Dict = {
     heard: 'क्या सुना गया',
     spoken: 'सावधान। यह कॉल ठगी जैसी लगती है। कोई कोड या भुगतान की जानकारी न बताएँ। फ़ोन काट दें और अपने कार्ड के पीछे छपे नंबर पर बैंक को कॉल करें।',
     titleFlash: 'ठगी की चेतावनी',
+  },
+  console: {
+    live: 'LIVE',
+    ended: 'ENDED',
+    riskTitle: 'Risk over time',
+    graphLabel: (level, score) => `Risk over time. Now ${level}, ${score} out of 10.`,
+    graphEmpty: 'Waiting for the first words…',
+    axisNote: 'Rule-based risk score from 0 to 10. It moves when new words are recognised.',
+    markerElevated: 'Warning',
+    markerHigh: 'High alert',
+    tipScore: (score) => `Risk score ${score} of 10`,
+    noNewEvidence: 'Nothing new was flagged at this point.',
+    wantsTitle: 'What the caller wants',
+    wantsNothing: 'Nothing sensitive has been asked for yet.',
+    wants: { otp_request: 'Your one-time code (OTP)', credential_request: 'Your PIN, password or card details', payment_request: 'You to send money', remote_access: 'Control of your phone or computer' },
+    tacticsTitle: 'Tactics heard',
+    timelineTitle: 'What happened, and when',
+    timelineEmpty: 'Nothing flagged yet.',
+    timelineHint: 'Select an item to find the words in the call and see why it matters.',
+    alertFired: (level) => `${level} alert shown`,
+    whyTitle: 'Why this matters',
+    detailsTitle: 'Call details',
+    duration: 'Duration',
+    cost: 'Estimated cost',
+    costNote: 'at the measured speech-to-text rate; the real bill may differ',
+    engine: 'Detection',
+    engineValue: 'Rule engine. No AI model reads the transcript.',
+    voice: 'Voice authenticity',
+    voiceValue: 'Checked after the call and added to the report.',
+    scorecardTitle: 'Call scorecard',
+    verdict: 'Verdict',
+    firstWarning: 'First warning',
+    highAlert: 'High alert',
+    firstAsk: 'First request for something sensitive',
+    notReached: 'Did not happen',
+    after: (s) => `after ${s} s`,
+    peak: 'Highest risk score',
+    tacticsHeard: 'Tactics heard',
+    noTactics: 'None',
+    timesNote: 'Times are measured on this screen from the audio heard, so they can lag the speech by a few seconds.',
+    unknownCaller: 'Unknown caller',
+    unknownNumber: 'Not in your contacts',
+    reconnectingPhone: 'Reconnecting…',
+    callEnded: 'Call ended',
+    hangUp: 'Hang up',
+    speaker: 'Speaker',
+    phoneElevated: 'Be careful: warning signs',
+    captionsTitle: 'Live captions',
+    captionsWaiting: 'Listening…',
+    takeoverLabel: 'Warning takes over the phone screen',
+    presenterTitle: 'Demo scripts',
+    presenterIntro: 'Fictional English scripts to read aloud at a normal speed. Never use real personal, bank or ID details.',
+    scriptScam: 'Scam: fake fraud department',
+    scriptScamShort: 'Scam: short bank call',
+    scriptFriendly: 'Friendly call',
+    scriptWarning: 'Bank awareness message (must stay low)',
+    copy: 'Copy',
+    copied: 'Copied',
   },
   nav: { upload: 'Upload a recording', live: 'Live check', call: 'Receive a call' },
   call: {
@@ -412,6 +529,64 @@ const hi: Dict = {
     spoken: 'सावधान. हा कॉल फसवणुकीसारखा वाटतो. कोणताही कोड किंवा पेमेंट तपशील सांगू नका. फोन कट करा आणि कार्डच्या मागे छापलेल्या नंबरवर बँकेला कॉल करा.',
     titleFlash: 'फसवणुकीचा इशारा',
   },
+  console: {
+    live: 'लाइव',
+    ended: 'समाप्त',
+    riskTitle: 'समय के साथ जोखिम',
+    graphLabel: (level, score) => `समय के साथ जोखिम। अभी ${level}, 10 में से ${score}।`,
+    graphEmpty: 'पहले शब्दों का इंतज़ार…',
+    axisNote: 'नियमों पर आधारित जोखिम स्कोर, 0 से 10। नए शब्द पहचाने जाने पर यह बदलता है।',
+    markerElevated: 'चेतावनी',
+    markerHigh: 'ऊँचा अलर्ट',
+    tipScore: (score) => `जोखिम स्कोर 10 में से ${score}`,
+    noNewEvidence: 'इस बिंदु पर कुछ नया चिह्नित नहीं हुआ।',
+    wantsTitle: 'कॉल करने वाला क्या चाहता है',
+    wantsNothing: 'अभी तक कोई संवेदनशील चीज़ नहीं माँगी गई।',
+    wants: { otp_request: 'आपका वन-टाइम कोड (OTP)', credential_request: 'आपका पिन, पासवर्ड या कार्ड की जानकारी', payment_request: 'कि आप पैसे भेजें', remote_access: 'आपके फ़ोन या कंप्यूटर का नियंत्रण' },
+    tacticsTitle: 'सुने गए तरीके',
+    timelineTitle: 'क्या हुआ, और कब',
+    timelineEmpty: 'अभी कुछ चिह्नित नहीं हुआ।',
+    timelineHint: 'किसी प्रविष्टि को चुनें ताकि कॉल में वे शब्द मिलें और पता चले कि यह क्यों मायने रखता है।',
+    alertFired: (level) => `${level} अलर्ट दिखाया गया`,
+    whyTitle: 'यह क्यों मायने रखता है',
+    detailsTitle: 'कॉल का ब्योरा',
+    duration: 'अवधि',
+    cost: 'अनुमानित खर्च',
+    costNote: 'मापी गई स्पीच-टू-टेक्स्ट दर पर; असली बिल अलग हो सकता है',
+    engine: 'पहचान',
+    engineValue: 'नियम इंजन। कोई AI मॉडल ट्रांसक्रिप्ट नहीं पढ़ता।',
+    voice: 'आवाज़ की असलियत',
+    voiceValue: 'कॉल के बाद जाँची जाती है और रिपोर्ट में जोड़ी जाती है।',
+    scorecardTitle: 'कॉल का स्कोरकार्ड',
+    verdict: 'नतीजा',
+    firstWarning: 'पहली चेतावनी',
+    highAlert: 'ऊँचा अलर्ट',
+    firstAsk: 'किसी संवेदनशील चीज़ की पहली माँग',
+    notReached: 'ऐसा नहीं हुआ',
+    after: (s) => `${s} सेकंड बाद`,
+    peak: 'सबसे ऊँचा जोखिम स्कोर',
+    tacticsHeard: 'सुने गए तरीके',
+    noTactics: 'कोई नहीं',
+    timesNote: 'समय इसी स्क्रीन पर सुनी गई आवाज़ से नापे जाते हैं, इसलिए वे बोलने से कुछ सेकंड पीछे हो सकते हैं।',
+    unknownCaller: 'अनजान कॉलर',
+    unknownNumber: 'आपके संपर्कों में नहीं',
+    reconnectingPhone: 'दोबारा जुड़ रहा है…',
+    callEnded: 'कॉल खत्म हुई',
+    hangUp: 'कॉल काटें',
+    speaker: 'स्पीकर',
+    phoneElevated: 'सावधान: खतरे के संकेत',
+    captionsTitle: 'लाइव कैप्शन',
+    captionsWaiting: 'सुन रहा है…',
+    takeoverLabel: 'चेतावनी फ़ोन की पूरी स्क्रीन घेर ले',
+    presenterTitle: 'डेमो स्क्रिप्ट',
+    presenterIntro: 'सामान्य गति से ज़ोर से पढ़ने के लिए काल्पनिक अंग्रेज़ी स्क्रिप्ट। असली निजी, बैंक या पहचान की जानकारी कभी इस्तेमाल न करें।',
+    scriptScam: 'ठगी: नकली फ्रॉड विभाग',
+    scriptScamShort: 'ठगी: छोटी बैंक कॉल',
+    scriptFriendly: 'दोस्ताना कॉल',
+    scriptWarning: 'बैंक की जागरूकता वाला संदेश (कम ही रहना चाहिए)',
+    copy: 'कॉपी करें',
+    copied: 'कॉपी हो गया',
+  },
   nav: { upload: 'रिकॉर्डिंग अपलोड करें', live: 'लाइव जाँच', call: 'कॉल रिसीव करें' },
   call: {
     nav: 'कॉल रिसीव करें',
@@ -624,6 +799,64 @@ const mr: Dict = {
     heard: 'काय ऐकले गेले',
     spoken: 'सावधान. हा कॉल फसवणुकीसारखा वाटतो. कोणताही कोड किंवा पेमेंट तपशील सांगू नका. फोन कट करा आणि कार्डच्या मागे छापलेल्या नंबरवर बँकेला कॉल करा.',
     titleFlash: 'फसवणुकीचा इशारा',
+  },
+  console: {
+    live: 'लाइव',
+    ended: 'संपले',
+    riskTitle: 'काळानुसार धोका',
+    graphLabel: (level, score) => `काळानुसार धोका. आत्ता ${level}, 10 पैकी ${score}.`,
+    graphEmpty: 'पहिल्या शब्दांची वाट पाहत आहे…',
+    axisNote: 'नियमांवर आधारित धोका गुण, 0 ते 10. नवे शब्द ओळखले गेले की तो बदलतो.',
+    markerElevated: 'इशारा',
+    markerHigh: 'उच्च अलर्ट',
+    tipScore: (score) => `धोका गुण 10 पैकी ${score}`,
+    noNewEvidence: 'या क्षणी नवीन काहीही नोंदवले गेले नाही.',
+    wantsTitle: 'कॉल करणारा काय मागतो आहे',
+    wantsNothing: 'अजून कोणतीही संवेदनशील गोष्ट मागितलेली नाही.',
+    wants: { otp_request: 'तुमचा वन-टाइम कोड (OTP)', credential_request: 'तुमचा पिन, पासवर्ड किंवा कार्डची माहिती', payment_request: 'तुम्ही पैसे पाठवावेत', remote_access: 'तुमच्या फोन किंवा संगणकाचा ताबा' },
+    tacticsTitle: 'ऐकलेले डावपेच',
+    timelineTitle: 'काय झाले, आणि केव्हा',
+    timelineEmpty: 'अजून काहीही नोंदवलेले नाही.',
+    timelineHint: 'एखादी नोंद निवडा म्हणजे कॉलमधील ते शब्द सापडतील आणि हे का महत्त्वाचे आहे ते कळेल.',
+    alertFired: (level) => `${level} अलर्ट दाखवला`,
+    whyTitle: 'हे का महत्त्वाचे आहे',
+    detailsTitle: 'कॉलचा तपशील',
+    duration: 'कालावधी',
+    cost: 'अंदाजित खर्च',
+    costNote: 'मोजलेल्या स्पीच-टू-टेक्स्ट दराने; प्रत्यक्ष बिल वेगळे असू शकते',
+    engine: 'ओळख',
+    engineValue: 'नियम इंजिन. कोणताही AI मॉडेल ट्रान्सक्रिप्ट वाचत नाही.',
+    voice: 'आवाजाची खरेपणा',
+    voiceValue: 'कॉलनंतर तपासला जातो आणि अहवालात जोडला जातो.',
+    scorecardTitle: 'कॉलचे स्कोअरकार्ड',
+    verdict: 'निकाल',
+    firstWarning: 'पहिला इशारा',
+    highAlert: 'उच्च अलर्ट',
+    firstAsk: 'एखाद्या संवेदनशील गोष्टीची पहिली मागणी',
+    notReached: 'असे झाले नाही',
+    after: (s) => `${s} सेकंदांनी`,
+    peak: 'सर्वाधिक धोका गुण',
+    tacticsHeard: 'ऐकलेले डावपेच',
+    noTactics: 'कोणतेही नाही',
+    timesNote: 'वेळा याच स्क्रीनवर ऐकलेल्या आवाजावरून मोजल्या जातात, त्यामुळे त्या बोलण्यापेक्षा काही सेकंद मागे असू शकतात.',
+    unknownCaller: 'अनोळखी कॉलर',
+    unknownNumber: 'तुमच्या संपर्कांमध्ये नाही',
+    reconnectingPhone: 'पुन्हा जोडत आहे…',
+    callEnded: 'कॉल संपला',
+    hangUp: 'कॉल कट करा',
+    speaker: 'स्पीकर',
+    phoneElevated: 'सावध रहा: धोक्याची चिन्हे',
+    captionsTitle: 'लाइव कॅप्शन',
+    captionsWaiting: 'ऐकत आहे…',
+    takeoverLabel: 'इशारा फोनची पूर्ण स्क्रीन व्यापेल',
+    presenterTitle: 'डेमो स्क्रिप्ट',
+    presenterIntro: 'सामान्य वेगाने मोठ्याने वाचण्यासाठी काल्पनिक इंग्रजी स्क्रिप्ट. खरी वैयक्तिक, बँक किंवा ओळखीची माहिती कधीही वापरू नका.',
+    scriptScam: 'फसवणूक: खोटा फसवणूक विभाग',
+    scriptScamShort: 'फसवणूक: छोटा बँक कॉल',
+    scriptFriendly: 'मैत्रीपूर्ण कॉल',
+    scriptWarning: 'बँकेचा जागरूकता संदेश (कमीच राहिला पाहिजे)',
+    copy: 'कॉपी करा',
+    copied: 'कॉपी झाले',
   },
   nav: { upload: 'रेकॉर्डिंग अपलोड करा', live: 'लाइव तपासणी', call: 'कॉल स्वीकारा' },
   call: {

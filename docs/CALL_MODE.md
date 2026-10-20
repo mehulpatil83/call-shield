@@ -3,6 +3,19 @@
 You talk on the phone (Speaker). The laptop (Receiver) shows the live check: risk meter, alert, highlighted evidence,
 transcript and "what to do now". The phone shows a plain call screen and never any analysis.
 
+## Call console (laptop, while the call runs)
+When the phone connects, the Receiver page switches to a two-column console designed for a laptop screen (best at 1366x768 or larger).
+* **Right half: a phone call simulation.** The protected person's phone: caller card ("Unknown caller"), call timer, live captions with the risky words highlighted, a risk strip (low, elevated, high), Speaker and Hang up buttons. At elevated risk an amber strip appears on the phone; at high risk the red warning, advice and evidence take over the phone screen.
+* **Left half:**
+  * Live status, timer, risk meter, audio level and the Listen and End controls.
+  * **Risk over time:** a graph of the rule-based score (0 to 10), coloured by level, with markers where each alert fired. **Hover or focus a point** to see what was heard at that moment.
+  * **What the caller wants**, the **tactic board** (tiles light up as each tactic is heard), and **what to do now**.
+  * **Timeline:** every tactic and alert with the time it was first seen. **Select an item** and those exact words light up in the phone's captions, with a short "why this matters".
+  * **Call details:** duration, estimated cost in rupees (0.47 per minute per speech stream, an estimate), detection engine, voice-check note, and the alert settings.
+  * **Demo scripts drawer** with four acted English scripts and a Copy button. It is also on the page before the call.
+* **After the call: a scorecard** with the verdict, time to the first warning, time to the high alert, time of the first request for something sensitive, the tactics heard, the highest score, and the Open report button.
+* Times and the graph use the audio time reported with each analysis update, so they can lag the speech by a few seconds. The score comes from the rules, so the line moves in steps.
+
 ## What each screen shows
 * **Phone (Speaker):** call timer, a microphone level bar, a warning if nothing has been heard for 8 seconds (not shown while muted), mute and end buttons. If the connection drops or the screen locks it says so and keeps trying to rejoin the same call for 60 seconds. After a page reload it offers a "Rejoin the call" button.
 * **Laptop (Receiver):** risk meter, alert, highlighted evidence, transcript, "what to do now", a "Receiving audio" indicator with a level bar (it warns if no audio arrives for 3 seconds, or only silence for 5), and a banner while the phone is reconnecting.
