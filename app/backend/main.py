@@ -25,6 +25,7 @@ import soundfile as sf
 from core.analyse import analyse_file, analyse_transcripts
 from core.audio_io import duration_seconds
 from core.gnani_client import Variant
+from core.model import get_model
 from core.live import LIVE_MAX_SECONDS, SAMPLE_RATE, LiveSession
 from core.authenticity import AuthenticityScorer
 from core.gnani_client import GnaniTranscriber, TranscriptionError, load_api_key
@@ -254,7 +255,7 @@ def create_app(data_dir: Path | None = None, transcriber_factory=None, scorer_fa
                 except Exception:
                     pass
 
-            session = LiveSession(language, stream_factory, send)
+            session = LiveSession(language, stream_factory, send, model=get_model())
             await session.start()
             while True:
                 msg = await ws.receive()

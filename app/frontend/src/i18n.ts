@@ -43,6 +43,12 @@ export interface ConsoleText {
   alertFired: (level: string) => string
   whyTitle: string
   detailsTitle: string
+  modelRow: string
+  modelOff: string
+  modelLoading: string
+  modelUnavailable: string
+  modelProb: (pct: number) => string
+  modelRaised: string
   duration: string
   cost: string
   costNote: string
@@ -278,6 +284,12 @@ const en: Dict = {
     alertFired: (level) => `${level} alert shown`,
     whyTitle: 'Why this matters',
     detailsTitle: 'Call details',
+    modelRow: 'Model second opinion',
+    modelOff: 'Off for this language',
+    modelLoading: 'Loading…',
+    modelUnavailable: 'Not installed (rules only)',
+    modelProb: (pct) => `${pct}% scam-like`,
+    modelRaised: ' – raised the alert',
     duration: 'Duration',
     cost: 'Estimated cost',
     costNote: 'at the measured speech-to-text rate; the real bill may differ',
@@ -550,6 +562,12 @@ const hi: Dict = {
     alertFired: (level) => `${level} अलर्ट दिखाया गया`,
     whyTitle: 'यह क्यों मायने रखता है',
     detailsTitle: 'कॉल का ब्योरा',
+    modelRow: 'मॉडल की दूसरी राय',
+    modelOff: 'इस भाषा के लिए बंद',
+    modelLoading: 'लोड हो रहा है…',
+    modelUnavailable: 'उपलब्ध नहीं (सिर्फ़ नियम)',
+    modelProb: (pct) => `${pct}% स्कैम जैसा`,
+    modelRaised: ' – अलर्ट बढ़ाया',
     duration: 'अवधि',
     cost: 'अनुमानित खर्च',
     costNote: 'मापी गई स्पीच-टू-टेक्स्ट दर पर; असली बिल अलग हो सकता है',
@@ -821,6 +839,12 @@ const mr: Dict = {
     alertFired: (level) => `${level} अलर्ट दाखवला`,
     whyTitle: 'हे का महत्त्वाचे आहे',
     detailsTitle: 'कॉलचा तपशील',
+    modelRow: 'मॉडलचे दुसरे मत',
+    modelOff: 'या भाषेसाठी बंद',
+    modelLoading: 'लोड होत आहे…',
+    modelUnavailable: 'उपलब्ध नाही (फक्त नियम)',
+    modelProb: (pct) => `${pct}% स्कॅमसारखे`,
+    modelRaised: ' – अलर्ट वाढवला',
     duration: 'कालावधी',
     cost: 'अंदाजित खर्च',
     costNote: 'मोजलेल्या स्पीच-टू-टेक्स्ट दराने; प्रत्यक्ष बिल वेगळे असू शकते',

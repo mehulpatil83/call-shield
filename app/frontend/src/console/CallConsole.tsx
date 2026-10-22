@@ -33,6 +33,10 @@ export default function CallConsole({ t, state, language, listening, audio, onLi
   const live = state.status === 'live' || state.status === 'stopping'
   const seconds = Math.max(elapsed, state.seconds)
 
+  const mdl = state.model
+  const modelText = !mdl ? '—' : mdl.status === 'off' ? c.modelOff : mdl.status === 'loading' ? c.modelLoading : mdl.status === 'unavailable' ? c.modelUnavailable
+    : mdl.prob === null ? '—' : c.modelProb(Math.round(mdl.peak * 100)) + (mdl.raised ? c.modelRaised : '')
+
   const heard = heardCategories(state.events)
   const wants = wantsNow(state.events)
   const chosen: LiveEvent | undefined = state.events.find((e) => e.id === selected)
@@ -174,6 +178,7 @@ export default function CallConsole({ t, state, language, listening, audio, onLi
             <div><dt>{c.duration}</dt><dd>{formatClock(seconds)}</dd></div>
             <div><dt>{c.cost}</dt><dd data-testid="cost">₹{estimateRupees(seconds, language).toFixed(2)} <small className="mut">{c.costNote}</small></dd></div>
             <div><dt>{c.engine}</dt><dd>{c.engineValue}</dd></div>
+            <div><dt>{c.modelRow}</dt><dd data-testid="model-row">{modelText}</dd></div>
             <div><dt>{c.voice}</dt><dd>{c.voiceValue}</dd></div>
           </dl>
           <AlertSettingsPanel t={t} settings={ax.settings} onChange={ax.change} fullscreenLabel={c.takeoverLabel} />

@@ -36,6 +36,7 @@ from pydantic import BaseModel
 from starlette.responses import PlainTextResponse
 
 from core.live import LIVE_MAX_SECONDS, LiveSession
+from core.model import get_model
 
 log = logging.getLogger("call-shield")
 
@@ -544,7 +545,7 @@ def add_call_routes(app: FastAPI, *, manager: CallManager, languages: dict, orig
                     live_busy["on"], room.owns_busy = True, True
                     try:
                         room.resume = secrets.token_urlsafe(16)
-                        room.session = LiveSession(room.language, stream_factory, forward)
+                        room.session = LiveSession(room.language, stream_factory, forward, model=get_model())
                         await room.session.start()
                         room.state, started = "live", True
                     except Exception as e:

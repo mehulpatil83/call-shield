@@ -1,5 +1,7 @@
 import type { Hit, Level } from '../types'
 
+/** The language model's second opinion, as reported by the server with every analysis. */
+export interface ModelInfo { status: 'off' | 'loading' | 'ready' | 'unavailable'; prob: number | null; peak: number; raised: boolean }
 export interface LiveTrack { code: string; text: string; hits: Hit[] }
 /** One step of the risk graph: when (audio seconds), how high, and which tactics were heard for the first time here. */
 export interface LivePoint { t: number; score: number; level: Level; fresh: { category: string; quote: string }[] }
@@ -21,6 +23,8 @@ export interface LiveState {
   events: LiveEvent[]
   /** the highest risk level of the whole call, known once it has ended */
   finalLevel: Level | null
+  /** the model's second opinion (absent until the first analysis, or from an older server) */
+  model?: ModelInfo | null
 }
 
 export const initialLive: LiveState = {
@@ -32,7 +36,7 @@ const RANK: Record<Level, number> = { low: 0, elevated: 1, high: 2 }
 export type ServerMessage =
   | { type: 'ready' }
   | { type: 'call'; state: 'waiting' | 'joined' | 'reconnecting' | 'live'; seconds?: number }
-  | { type: 'analysis'; level: Level; score: number; summary: string; seconds: number; tracks: LiveTrack[]; hits: Hit[] }
+  | { type: 'analysis'; level: Level; score: number; summary: string; seconds: number; tracks: LiveTrack[]; hits: Hit[]; model?: ModelInfo }
   | { type: 'alert'; level: Level }
   | { type: 'ended'; id: string | null; message?: string; level?: Level; max_level?: Level }
   | { type: 'error'; message: string }
@@ -58,7 +62,7 @@ export function liveReducer(state: LiveState, msg: ServerMessage): LiveState {
       }
       const point: LivePoint = { t: msg.seconds, score: msg.score, level: msg.level, fresh: fresh.map((e) => ({ category: e.category!, quote: e.quote! })) }
       return {
-        ...state, level: msg.level, score: msg.score, summary: msg.summary, seconds: msg.seconds, tracks: msg.tracks, hits: msg.hits,
+        ...state, level: msg.level, score: msg.score, summary: msg.summary, seconds: msg.seconds, tracks: msg.tracks, hits: msg.hits, model: msg.model ?? state.model ?? null,
         history: [...state.history, point].slice(-600), events: fresh.length ? [...state.events, ...fresh] : state.events,
       }
     }

@@ -118,6 +118,8 @@ def test_listen_is_off_by_default_and_forwards_audio_only_when_switched_on(tmp_p
             tx.receive_json()
             assert rx.receive_json()["type"] == "ready"
             tx.send_bytes(pcm(0.2))                                   # listen is off: nothing forwarded
+            while rx.receive_json()["type"] != "audio":               # the server reports the first chunk's loudness right after it
+                pass                                                  # has decided not to forward it: only now switch listen on
             rx.send_json({"type": "listen", "on": True})
             tx.send_bytes(pcm(0.2))
             tx.send_bytes(pcm(0.2))

@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from typing import Awaitable, Callable
 
 from . import config
+from .model import MODEL_LANGUAGES, ScamModel, combine
 from .rules import analyse_text, merge_results
 
 FRAME_BYTES = 1024            # 512 samples of 16-bit PCM = 32 ms at 16 kHz
@@ -43,8 +44,15 @@ class LiveResult:
 
 class LiveSession:
     def __init__(self, language: str, stream_factory: Callable[[str], object],
-                 send: Callable[[dict], Awaitable[None]]):
+                 send: Callable[[dict], Awaitable[None]], model: ScamModel | None = None):
         self.codes = config.LANG_CODES[language]
+        self.model = model if language in MODEL_LANGUAGES else None     # second opinion: English / Hinglish only
+        self.language = language
+        self.model_peak = 0.0                 # highest model probability heard in this call (the rules are cumulative too)
+        self.model_now: float | None = None
+        self.model_raised = False
+        self._scored_words = 0
+        self._scoring = False
         self.factory, self.send = stream_factory, send
         self.tracks: list[Track] = []
         self.buffer = bytearray()
@@ -135,21 +143,61 @@ class LiveSession:
         except Exception as e:
             await self.send({"type": "warning", "code": track.code, "message": f"{type(e).__name__}: {e}"[:200]})
 
+    def _model_text(self, live: list) -> str:
+        """The model reads ONE transcript: the Roman-script English track when there is one, else the longest."""
+        for t in live:
+            if t.code == "en-IN":
+                return t.text
+        return max((t.text for t in live), key=len, default="")
+
+    async def _model_step(self, text: str, final: bool) -> None:
+        m = self.model
+        if m is None or m.status != "ready":
+            return
+        words = len(text.split())
+        if words - self._scored_words < (1 if final else 3) or self._scoring:
+            return
+        self._scoring = True
+        try:
+            p = await asyncio.to_thread(m.score, text)
+            if p is not None:
+                self.model_now, self._scored_words = p, words
+                self.model_peak = max(self.model_peak, p)
+        except Exception:
+            self.model_now = None                       # a failing model must never break the call: rules carry on
+        finally:
+            self._scoring = False
+
+    def _model_status(self) -> str:
+        if self.model is None or self.model.status == "idle":
+            return "off"
+        return self.model.status
+
     async def _analyse(self, final: bool = False) -> None:
         live = [t for t in self.tracks if t.text]
         if not live:
             return
         results = [analyse_text(t.text, source=t.code) for t in live]
         merged = merge_results(results, [t.text for t in live])
-        self.level = merged.level
+        mtext = self._model_text(live)
+        await self._model_step(mtext, final)
+        level, raised = combine(merged.level, self.model_peak if self.model_now is not None else None, len(mtext.split()))
+        self.model_raised = raised
+        summary = merged.summary
+        if raised:
+            summary += (" The language model also rates this call as very likely a scam"
+                        f" ({round(self.model_peak * 100)}%), though no single phrase stands out.")
+        self.level = level
         await self.send({
-            "type": "analysis", "final": final, "level": merged.level, "score": merged.score, "summary": merged.summary,
-            "seconds": round(self.seconds, 1),
+            "type": "analysis", "final": final, "level": level, "score": max(merged.score, {"elevated": 3.0, "high": 6.0}[level]) if raised else merged.score,
+            "summary": summary, "seconds": round(self.seconds, 1),
             "tracks": [{"code": t.code, "text": t.text, "hits": [h.__dict__ for h in r.hits]} for t, r in zip(live, results)],
             "hits": [h.__dict__ for h in merged.hits],
+            "model": {"status": self._model_status(), "prob": None if self.model_now is None else round(self.model_now, 3),
+                      "peak": round(self.model_peak, 3), "raised": raised},
         })
-        rank = LEVEL_RANK[merged.level]
+        rank = LEVEL_RANK[level]
         if rank > self.max_rank:
             self.max_rank = rank
             if rank >= 1:
-                await self.send({"type": "alert", "level": merged.level})
+                await self.send({"type": "alert", "level": level})

@@ -336,3 +336,24 @@ describe('CallReceiver switches to the console', () => {
     expect(screen.getAllByRole('button', { name: /./ }).some((b) => b.textContent === t.call.end)).toBe(true)
   })
 })
+
+describe('model second opinion', () => {
+  const withModel = (model: NonNullable<LiveState['model']>): LiveState =>
+    reduceLive(call, { ...(analysis(23, 8, 'high', [AUTH, NOW, OTP]) as Extract<LiveAction, { type: 'analysis' }>), model })
+
+  it('keeps the model info from the analysis message', () => {
+    expect(withModel({ status: 'ready', prob: 0.91, peak: 0.91, raised: true }).model?.peak).toBe(0.91)
+    expect(call.model ?? null).toBeNull()                                   // an older server sends none
+  })
+
+  it('shows what the model says in the details', () => {
+    const { unmount } = render(consoleView(withModel({ status: 'ready', prob: 0.91, peak: 0.93, raised: true })))
+    expect(screen.getByTestId('model-row').textContent).toBe(t.console.modelProb(93) + t.console.modelRaised)
+    unmount()
+    const r2 = render(consoleView(withModel({ status: 'off', prob: null, peak: 0, raised: false })))
+    expect(screen.getByTestId('model-row').textContent).toBe(t.console.modelOff)
+    r2.unmount()
+    render(consoleView(withModel({ status: 'unavailable', prob: null, peak: 0, raised: false })))
+    expect(screen.getByTestId('model-row').textContent).toBe(t.console.modelUnavailable)
+  })
+})

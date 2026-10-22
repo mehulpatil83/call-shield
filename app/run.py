@@ -7,6 +7,8 @@ import webbrowser
 
 import uvicorn
 
+from core.model import start_loading
+
 from .backend.main import FRONTEND_DIST, create_app
 
 
@@ -23,6 +25,7 @@ def main() -> None:
     url = f"http://127.0.0.1:{a.port}"
     if not a.no_browser:
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
+    start_loading()          # the language model loads in the background; without it the rules work alone
     print(f"call-shield running at {url}  (Ctrl+C to stop)")
     uvicorn.run(create_app(public_url=a.public_url), host="127.0.0.1", port=a.port, log_level="warning")
 
