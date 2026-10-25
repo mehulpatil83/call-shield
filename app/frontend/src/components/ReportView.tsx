@@ -10,9 +10,11 @@ interface Props {
   t: Dict
   onDelete: () => void
   onBack: () => void
+  /** for live calls: the label of the link to the timestamped, interactive report */
+  timelineLabel?: string
 }
 
-export default function ReportView({ detail, t, onDelete, onBack }: Props) {
+export default function ReportView({ detail, t, onDelete, onBack, timelineLabel }: Props) {
   const report = detail.report
   const [active, setActive] = useState<{ ti: number; hit: Hit } | null>(null)
   if (!report) return null
@@ -27,6 +29,7 @@ export default function ReportView({ detail, t, onDelete, onBack }: Props) {
     <article className="report">
       <div className="toolbar">
         <button type="button" className="button secondary" onClick={onBack}>{t.back}</button>
+        {timelineLabel && <a className="button primary" href={`#/r/${detail.id}`}>{timelineLabel}</a>}
         <a className="button secondary" href={reportHtmlUrl(detail.id)}>{t.download}</a>
         <button type="button" className="button danger" onClick={onDelete}>{t.delete}</button>
       </div>

@@ -11,8 +11,9 @@ from dataclasses import dataclass, field
 from typing import Awaitable, Callable
 
 from . import config
-from .model import MODEL_LANGUAGES, ScamModel, combine
+from .model import ELEVATED_AT, HIGH_AT, MODEL_LANGUAGES, ScamModel, combine
 from .rules import analyse_text, merge_results
+from .session_log import SessionLog
 
 FRAME_BYTES = 1024            # 512 samples of 16-bit PCM = 32 ms at 16 kHz
 SAMPLE_RATE = 16000
@@ -40,6 +41,7 @@ class LiveResult:
     seconds: float
     level: str
     max_level: str
+    log: dict | None = None                # the full timestamped record of the call (core/session_log.py)
 
 
 class LiveSession:
@@ -60,6 +62,14 @@ class LiveSession:
         self.max_rank = 0
         self.level = "low"
         self.closed = False
+        self.log = SessionLog(language)
+        self._seen_hits: set = set()
+        self._model_marks: set = set()
+        self._first_words = False
+
+    def note(self, kind: str, source: str = "system", **data) -> None:
+        """Record a call event (phone joined, dropped, listen switched ...) at the current call time."""
+        self.log.event(kind, self.seconds, source, **data)
 
     # ------------------------------------------------------------------ lifecycle -----------
     async def start(self) -> None:
@@ -69,6 +79,7 @@ class LiveSession:
             t = Track(code, client)
             t.task = asyncio.create_task(self._consume(t))
             self.tracks.append(t)
+        self.log.event("call_started", 0.0, codes=self.codes)
         await self.send({"type": "ready", "codes": self.codes})
 
     async def feed(self, data: bytes) -> bool:
@@ -123,7 +134,7 @@ class LiveSession:
     def _result(self) -> LiveResult:
         rank_name = {v: k for k, v in LEVEL_RANK.items()}
         return LiveResult({t.code: t.text for t in self.tracks}, bytes(self.pcm), self.seconds, self.level,
-                          rank_name[self.max_rank])
+                          rank_name[self.max_rank], self.log.to_dict(self.seconds, rank_name[self.max_rank], self.level))
 
     # ------------------------------------------------------------------ events -------------
     async def _consume(self, track: Track) -> None:
@@ -135,9 +146,15 @@ class LiveSession:
                     if key not in track.segments:
                         track.order.append(key)
                     track.segments[key] = ev.text
+                    self.log.segment(track.code, key, ev.text, self.seconds)
+                    if not self._first_words:
+                        self._first_words = True
+                        self.log.event("first_words", self.seconds, "system", track=track.code)
                     await self._analyse()
                 elif name == "StreamErrorEvent":
-                    await self.send({"type": "warning", "code": track.code, "message": str(getattr(ev, "message", ""))[:200]})
+                    msg = str(getattr(ev, "message", ""))[:200]
+                    self.log.event("warning", self.seconds, "system", track=track.code, message=msg)
+                    await self.send({"type": "warning", "code": track.code, "message": msg})
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -173,6 +190,25 @@ class LiveSession:
             return "off"
         return self.model.status
 
+    def _record(self, merged, level: str, raised: bool, rule_score: float) -> None:
+        t = self.seconds
+        for h in merged.hits:
+            key = (h.category, h.quote.casefold(), h.source)
+            if key in self._seen_hits:
+                continue
+            self._seen_hits.add(key)
+            self.log.event("tactic", t, "rules", category=h.category, kind_of=h.kind, quote=h.quote, track=h.source,
+                           explanation=h.explanation)
+        for mark, name in ((ELEVATED_AT, "elevated"), (HIGH_AT, "high")):
+            if self.model_peak >= mark and mark not in self._model_marks:
+                self._model_marks.add(mark)
+                self.log.event("model", t, "model", prob=round(self.model_peak, 3), threshold=mark, would_raise=name)
+        if level != self.level:
+            self.log.event("level", t, "model" if raised else "rules", frm=self.level, to=level,
+                           score=round(max(rule_score, {"elevated": 3.0, "high": 6.0}.get(level, 0.0)) if raised else rule_score, 2))
+        self.log.risk_point(t, level, max(rule_score, {"elevated": 3.0, "high": 6.0}.get(level, 0.0)) if raised else rule_score,
+                            self.model_now)
+
     async def _analyse(self, final: bool = False) -> None:
         live = [t for t in self.tracks if t.text]
         if not live:
@@ -187,6 +223,7 @@ class LiveSession:
         if raised:
             summary += (" The language model also rates this call as very likely a scam"
                         f" ({round(self.model_peak * 100)}%), though no single phrase stands out.")
+        self._record(merged, level, raised, merged.score)
         self.level = level
         await self.send({
             "type": "analysis", "final": final, "level": level, "score": max(merged.score, {"elevated": 3.0, "high": 6.0}[level]) if raised else merged.score,
@@ -200,4 +237,5 @@ class LiveSession:
         if rank > self.max_rank:
             self.max_rank = rank
             if rank >= 1:
+                self.log.event("alert", self.seconds, "alert", level=level)
                 await self.send({"type": "alert", "level": level})

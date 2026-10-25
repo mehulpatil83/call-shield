@@ -299,6 +299,8 @@ def add_call_routes(app: FastAPI, *, manager: CallManager, languages: dict, orig
                     continue
                 if data.get("type") == "listen":
                     room.listen = bool(data.get("on"))
+                    if room.session is not None:
+                        room.session.note("listen", "system", on=room.listen)
                 elif data.get("type") == "end":
                     if room.stop:
                         room.stop.set()
@@ -334,6 +336,8 @@ def add_call_routes(app: FastAPI, *, manager: CallManager, languages: dict, orig
         session, room.session = room.session, None
         speaker = room.speaker
         try:
+            if session:
+                session.note("ended", reason=problem or "normal")
             result = await session.stop() if session else None
             if problem and speaker is not None:
                 await _send_safe(speaker, {"type": "error", "message": problem})
@@ -431,6 +435,7 @@ def add_call_routes(app: FastAPI, *, manager: CallManager, languages: dict, orig
         if outcome == "superseded":
             return
         if outcome == "dropped" and room.session is not None and room.state == "live":
+            room.session.note("phone_dropped", "connection")
             room.speaker, room.state = None, "reconnecting"
             await room.to_receiver({"type": "call", "state": "reconnecting", "seconds": int(GRACE_SECONDS)})
             room.grace_task = asyncio.ensure_future(grace(room))
@@ -470,6 +475,8 @@ def add_call_routes(app: FastAPI, *, manager: CallManager, languages: dict, orig
                 room.grace_task.cancel()
                 room.grace_task = None
             old, room.speaker, room.state = room.speaker, ws, "live"
+            if room.session is not None:
+                room.session.note("phone_rejoined", "connection")
             if old is not None and old is not ws:
                 try:
                     await old.close()
@@ -547,6 +554,7 @@ def add_call_routes(app: FastAPI, *, manager: CallManager, languages: dict, orig
                         room.resume = secrets.token_urlsafe(16)
                         room.session = LiveSession(room.language, stream_factory, forward, model=get_model())
                         await room.session.start()
+                        room.session.note("phone_joined", "connection")
                         room.state, started = "live", True
                     except Exception as e:
                         log.exception("could not start the call analysis")

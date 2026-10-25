@@ -92,6 +92,23 @@ class Store:
         f = self.reports / f"{id}.html"
         return f.read_text(encoding="utf-8") if f.exists() else None
 
+    # ---- the timestamped call record and the AI-written summaries (both removed by delete()) ----------
+    def save_session(self, id: str, record: dict) -> None:
+        (self.reports / f"{id}.session.json").write_text(json.dumps(record, ensure_ascii=False), encoding="utf-8")
+
+    def load_session(self, id: str) -> dict | None:
+        f = self.reports / f"{id}.session.json"
+        return json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
+
+    def load_ai(self, id: str) -> dict:
+        f = self.reports / f"{id}.ai.json"
+        return json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+
+    def save_ai(self, id: str, lang: str, result: dict) -> None:
+        data = self.load_ai(id)
+        data[lang] = result
+        (self.reports / f"{id}.ai.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
     def delete(self, id: str) -> bool:
         rec = self.get(id)
         if not rec:

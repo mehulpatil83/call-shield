@@ -1,4 +1,5 @@
-import type { AnalysisDetail, AnalysisSummary, Health, SpeechLang } from './types'
+import type { SessionResponse, AiResult } from './report/types'
+import type { AnalysisDetail, AnalysisSummary, Health, Lang, SpeechLang } from './types'
 
 export class ApiError extends Error {}
 
@@ -44,5 +45,12 @@ export function createCall(language: SpeechLang, consent: boolean, skipAudioChec
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ language, consent, skip_audio_check: skipAudioCheck, public_url: publicUrl || null }),
+  })
+}
+
+export const getSession = (id: string) => call<SessionResponse>(`/api/analyses/${id}/session`)
+export function writeAi(id: string, lang: Lang, consent: boolean, force = false) {
+  return call<{ ai: AiResult; cached: boolean }>(`/api/analyses/${id}/ai`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang, consent, force }),
   })
 }

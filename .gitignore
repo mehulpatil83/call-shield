@@ -3,6 +3,7 @@
 *.env
 !.env.example
 models/
+data/
 
 # python
 .venv/

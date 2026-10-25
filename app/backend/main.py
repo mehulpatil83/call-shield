@@ -26,6 +26,8 @@ from core.analyse import analyse_file, analyse_transcripts
 from core.audio_io import duration_seconds
 from core.gnani_client import Variant
 from core.model import get_model
+from core import report_ai
+from core.session_log import wall_now
 from core.live import LIVE_MAX_SECONDS, SAMPLE_RATE, LiveSession
 from core.authenticity import AuthenticityScorer
 from core.gnani_client import GnaniTranscriber, TranscriptionError, load_api_key
@@ -187,6 +189,42 @@ def create_app(data_dir: Path | None = None, transcriber_factory=None, scorer_fa
         headers = {"Content-Disposition": f'attachment; filename="call-shield-{id}.html"'} if download else {}
         return HTMLResponse(page, headers=headers)
 
+    # ------------------------------------------------------------------ timestamped report + AI summary ----
+    ai_busy: set[str] = set()
+
+    @app.get("/api/analyses/{id}/session")
+    def get_session(id: str):
+        rec = store.load_session(id) if ID_RE.match(id) else None
+        if rec is None:
+            raise HTTPException(404, "There is no timeline for this analysis (only live calls have one).")
+        return {"session": rec, "ai": store.load_ai(id), "ai_status": report_ai.status()}
+
+    @app.post("/api/analyses/{id}/ai")
+    def write_ai(id: str, body: dict):
+        """Write the AI summary in the chosen language. Sends the masked transcript text (never audio) to the configured service."""
+        rec = store.load_session(id) if ID_RE.match(id) else None
+        if rec is None:
+            raise HTTPException(404, "There is no timeline for this analysis.")
+        lang = str(body.get("lang", "en"))
+        if lang not in report_ai.LANG_NAMES:
+            raise HTTPException(400, "Unknown language.")
+        if body.get("consent") is not True:
+            raise HTTPException(400, "Consent is required before text is sent to the AI service.")
+        cached = store.load_ai(id).get(lang)
+        if cached and not body.get("force"):
+            return {"ai": cached, "cached": True}
+        if id in ai_busy:
+            raise HTTPException(429, "A summary is already being written for this call.")
+        ai_busy.add(id)
+        try:
+            result = report_ai.generate(rec, lang)
+        except report_ai.AiError as e:
+            raise HTTPException(503, str(e))
+        finally:
+            ai_busy.discard(id)
+        store.save_ai(id, lang, result)
+        return {"ai": result, "cached": False}
+
     @app.delete("/api/analyses/{id}")
     def delete_one(id: str):
         if not store.delete(id):
@@ -221,6 +259,12 @@ def create_app(data_dir: Path | None = None, transcriber_factory=None, scorer_fa
             report["meta"]["est_cost_rupees"] = round(result.seconds / 60 * config.RUPEES_PER_MIN * len(codes), 2)
             report["meta"]["live"] = True
             store.save_report(id, report, page)
+            if result.log:
+                rec = {**result.log, "id": id, "call_language": language}
+                if auth is not None:
+                    rec["events"].append({"i": len(rec["events"]), "t": rec["duration"], "wall": wall_now(), "source": "voice",
+                                          "kind": "voice_check", "label": auth.label, "status": auth.status})
+                store.save_session(id, rec)
             store.update(id, status="done", level=report["conversation"]["level"],
                          auth_label=auth.label if auth else None, est_rupees=report["meta"]["est_cost_rupees"],
                          audio_seconds=report["meta"]["audio_seconds"])

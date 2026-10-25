@@ -5,6 +5,8 @@ import HistoryList from './components/HistoryList'
 import LivePanel from './components/LivePanel'
 import ProgressCard from './components/ProgressCard'
 import ReportView from './components/ReportView'
+import ReportPage from './report/ReportPage'
+import { RTEXT } from './report/strings'
 import SpeakerPage from './components/SpeakerPage'
 import UploadCard from './components/UploadCard'
 import { LANG_NAMES, STRINGS } from './i18n'
@@ -24,7 +26,7 @@ function useLang(): [Lang, (l: Lang) => void] {
   }]
 }
 
-type Route = { name: 'home' } | { name: 'live' } | { name: 'call' } | { name: 'join'; code: string } | { name: 'analysis'; id: string }
+type Route = { name: 'home' } | { name: 'live' } | { name: 'call' } | { name: 'join'; code: string } | { name: 'analysis'; id: string } | { name: 'report'; id: string }
 
 function readRoute(): Route {
   const h = window.location.hash
@@ -32,6 +34,8 @@ function readRoute(): Route {
   if (h === '#/call') return { name: 'call' }
   const code = /^#\/join\/(\d{0,6})$/.exec(h)?.[1]
   if (code !== undefined) return { name: 'join', code }
+  const rid = /^#\/r\/([a-f0-9]{12})$/.exec(h)?.[1]
+  if (rid) return { name: 'report', id: rid }
   const id = /^#\/a\/([a-f0-9]{12})$/.exec(h)?.[1]
   return id ? { name: 'analysis', id } : { name: 'home' }
 }
@@ -44,7 +48,7 @@ function useRoute(): [Route, (r: Route) => void] {
     return () => window.removeEventListener('hashchange', on)
   }, [])
   return [route, (next) => {
-    window.location.hash = next.name === 'analysis' ? `#/a/${next.id}` : next.name === 'live' ? '#/live' : next.name === 'call' ? '#/call' : next.name === 'join' ? `#/join/${next.code}` : ''
+    window.location.hash = next.name === 'analysis' ? `#/a/${next.id}` : next.name === 'report' ? `#/r/${next.id}` : next.name === 'live' ? '#/live' : next.name === 'call' ? '#/call' : next.name === 'join' ? `#/join/${next.code}` : ''
   }]
 }
 
@@ -91,7 +95,8 @@ function AnalysisView({ id, lang, onBack }: { id: string; lang: Lang; onBack: ()
       </section>
     )
   }
-  return <ReportView detail={detail} t={t} onDelete={remove} onBack={onBack} />
+  const live = Boolean((detail.report?.meta as { live?: boolean } | undefined)?.live)
+  return <ReportView detail={detail} t={t} onDelete={remove} onBack={onBack} timelineLabel={live ? RTEXT[lang].title : undefined} />
 }
 
 function LocalApp() {
@@ -165,11 +170,14 @@ function LocalApp() {
       {error && <p className="notice warn" role="alert">{error}</p>}
 
       {route.name === 'live' ? (
-        <LivePanel t={t} onOpenReport={(rid) => setId(rid)} />
+        <LivePanel t={t} onOpenReport={(rid) => setRoute({ name: 'report', id: rid })} />
       ) : route.name === 'call' ? (
-        <CallReceiver t={t} onOpenReport={(rid) => setId(rid)} />
+        <CallReceiver t={t} onOpenReport={(rid) => setRoute({ name: 'report', id: rid })} />
       ) : route.name === 'join' ? (
         <SpeakerPage t={t} initialCode={route.code} />
+      ) : route.name === 'report' ? (
+        <ReportPage id={route.id} lang={lang} onLang={setLang} onBack={() => setRoute({ name: 'home' })}
+                    onTechnical={() => setRoute({ name: 'analysis', id: route.id })} onDeleted={() => setRoute({ name: 'home' })} />
       ) : id ? (
         <AnalysisView id={id} lang={lang} onBack={() => setId(null)} />
       ) : (
