@@ -152,6 +152,11 @@ def build_messages(facts: dict, lang: str) -> list[dict]:
         f"Write every text field in {name}. Use ONLY the facts and the transcript given. Never invent names, organisations, "
         "amounts, numbers or events. If something is unclear, say it is unclear. Do not claim the call is certainly a scam: "
         "describe what the signals show and what the person should do. Spoken digits were hidden on purpose; do not guess them. "
+        "Mention only what is written in the facts or the transcript. Do NOT mention phone numbers, caller ID, whether the number was known "
+        "or unknown, whether identity was checked or offered, the caller's voice or accent, or what the person answered, unless it is written there. "
+        "Every item in why_risky must rest on a tactic in tactics_heard or a risk change, in plain words. The advice must be general safety "
+        "steps (hang up, never share codes or passwords, call the bank on the number printed on the card or on its official website) and must "
+        "not mention call-shield or any app. "
         "Reply with ONE JSON object and nothing else: no thinking out loud, no text before or after it, no code fence. Exactly these keys: "
         '"summary" (2-4 sentences), "what_happened" (list of up to 6 objects {"at": seconds as a number taken from the facts, '
         '"text": one sentence}), "why_risky" (list of up to 4 short strings), "advice" (list of 3-5 short, concrete strings), '
@@ -328,7 +333,7 @@ def _generate_pool(session: dict, lang: str, s: dict, msgs: list[dict], post) ->
     cands = candidates(s["model"], _models_list(s))
     attempts: list[dict] = []
     for cand in cands:
-        payload = {"model": cand, "messages": msgs, "max_tokens": 2000, "temperature": 0.2, **_extra_params(cand)}
+        payload = {"model": cand, "messages": msgs, "max_tokens": 2000, "temperature": 0.1, **_extra_params(cand)}
         try:
             data = post(s["url"], s["key"], payload)
         except AiFatal:
@@ -368,7 +373,7 @@ def generate(session: dict, lang: str, post=None) -> dict:
     msgs = build_messages(build_facts(session), lang)
     if s["provider"] in ("groq", "openai") and (s["provider"] == "groq" or not s["model"]):
         return _generate_pool(session, lang, s, msgs, post or _post)
-    payload = {"messages": msgs, "max_tokens": 1400, "temperature": 0.2}
+    payload = {"messages": msgs, "max_tokens": 1400, "temperature": 0.1}
     if s["provider"] == "openai":
         payload["model"] = s["model"]
     data = (post or _post)(s["url"], s["key"], payload)

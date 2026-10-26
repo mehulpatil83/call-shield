@@ -23,6 +23,11 @@ export interface ReportText {
     title: string; notSet: string; howTo: string; consent: (to: string) => string; auto: string; write: string; writing: string; again: string
     by: (model: string) => string; fellBack: (n: number) => string; warn: string; happened: string; why: string; advice: string; quotes: string; langNote: string
   }
+  combined: {
+    title: string; sub: string; rules: string; rulesDesc: string; model: string; modelDesc: string; ai: string; aiDesc: string; final: string
+    decidedRules: string; decidedNone: string; decidedModel: (t: string) => string; modelNone: string; modelAgrees: string; modelRaised: (t: string) => string
+    tactics: (n: number) => string; aiWaiting: string; aiCta: string
+  }
   loading: string; loadError: string; noTimeline: string
 }
 
@@ -57,6 +62,14 @@ const en: ReportText = {
     write: 'Write the AI summary', writing: 'Writing the summary…', again: 'Write again', by: (m) => `Written by the open model ${m}`, fellBack: (n) => `${n} other free model${n === 1 ? ' was' : 's were'} unavailable or unusable first.`,
     warn: 'AI-written text can contain mistakes. The verdict, the timeline and the highlighted words come from the rules, not from the AI.',
     happened: 'What happened', why: 'Why it looked risky', advice: 'What to do', quotes: 'Words quoted', langNote: 'Summary language',
+  },
+  combined: {
+    title: 'Combined analysis', sub: 'Three checks work together. The rules explain the verdict, the language model gives a second opinion, and the AI model tells the story.',
+    rules: 'Rule engine', rulesDesc: 'Quotes the exact words it acted on.', model: 'Language model', modelDesc: 'A trained classifier reads the transcript (English and Hinglish).',
+    ai: 'AI summary', aiDesc: 'An open model writes the story in your language.', final: 'Final verdict', decidedRules: 'Decided by the rules.',
+    decidedNone: 'No tactic crossed the alert thresholds.', decidedModel: (t) => `Raised by the language model at ${t}.`, modelNone: 'Did not score this call',
+    modelAgrees: 'Did not change the verdict', modelRaised: (t) => `Raised the alert at ${t}`, tactics: (n) => `${n} tactic${n === 1 ? '' : 's'} heard`,
+    aiWaiting: 'Writing the summary…', aiCta: 'Not written yet. Use the AI summary below.',
   },
   loading: 'Loading the report…', loadError: 'The report could not be loaded.', noTimeline: 'This analysis has no timeline. Only live calls record one.',
 }
@@ -93,6 +106,14 @@ const hi: ReportText = {
     warn: 'AI का लिखा टेक्स्ट गलत हो सकता है। नतीजा, समय-रेखा और चिह्नित शब्द नियमों से आते हैं, AI से नहीं।',
     happened: 'क्या हुआ', why: 'यह जोखिम भरा क्यों लगा', advice: 'क्या करें', quotes: 'उद्धृत शब्द', langNote: 'सारांश की भाषा',
   },
+  combined: {
+    title: 'संयुक्त विश्लेषण', sub: 'तीन जाँचें साथ काम करती हैं। नियम नतीजे की वजह बताते हैं, भाषा मॉडल दूसरी राय देता है, और AI मॉडल कहानी बताता है।',
+    rules: 'नियम इंजन', rulesDesc: 'जिन शब्दों पर चला, उन्हें हू-ब-हू उद्धृत करता है।', model: 'भाषा मॉडल', modelDesc: 'एक प्रशिक्षित वर्गीकरण मॉडल ट्रांसक्रिप्ट पढ़ता है (अंग्रेज़ी और हिंग्लिश)।',
+    ai: 'AI सारांश', aiDesc: 'एक ओपन मॉडल आपकी भाषा में कहानी लिखता है।', final: 'अंतिम नतीजा', decidedRules: 'नियमों ने तय किया।',
+    decidedNone: 'कोई चाल अलर्ट की सीमा तक नहीं पहुँची।', decidedModel: (t) => `भाषा मॉडल ने ${t} पर बढ़ाया।`, modelNone: 'इस कॉल को नहीं आँका',
+    modelAgrees: 'नतीजा नहीं बदला', modelRaised: (t) => `${t} पर अलर्ट बढ़ाया`, tactics: (n) => `${n} चालें सुनी गईं`,
+    aiWaiting: 'सारांश लिखा जा रहा है…', aiCta: 'अभी नहीं लिखा। नीचे AI सारांश का उपयोग करें।',
+  },
   loading: 'रिपोर्ट लोड हो रही है…', loadError: 'रिपोर्ट लोड नहीं हो सकी।', noTimeline: 'इस विश्लेषण की समय-रेखा नहीं है। केवल लाइव कॉल की समय-रेखा बनती है।',
 }
 
@@ -127,6 +148,14 @@ const mr: ReportText = {
     write: 'AI सारांश लिहा', writing: 'सारांश लिहिला जात आहे…', again: 'पुन्हा लिहा', by: (m) => `ओपन मॉडेल ${m} ने लिहिले`, fellBack: (n) => `आधी ${n} इतर मोफत मॉडेल उपलब्ध किंवा उपयोगी नव्हती.`,
     warn: 'AI ने लिहिलेल्या मजकुरात चुका असू शकतात. निकाल, कालरेषा आणि ठळक शब्द नियमांवरून येतात, AI वरून नाही.',
     happened: 'काय झाले', why: 'हे धोकादायक का वाटले', advice: 'काय करावे', quotes: 'उद्धृत शब्द', langNote: 'सारांशाची भाषा',
+  },
+  combined: {
+    title: 'एकत्रित विश्लेषण', sub: 'तीन तपासण्या एकत्र काम करतात. नियम निकालाचे कारण सांगतात, भाषा मॉडेल दुसरे मत देते, आणि AI मॉडेल गोष्ट सांगते.',
+    rules: 'नियम इंजिन', rulesDesc: 'ज्या शब्दांवर चालले ते जसेच्या तसे उद्धृत करते.', model: 'भाषा मॉडेल', modelDesc: 'एक प्रशिक्षित वर्गीकरण मॉडेल ट्रान्सक्रिप्ट वाचते (इंग्रजी आणि हिंग्लिश).',
+    ai: 'AI सारांश', aiDesc: 'एक ओपन मॉडेल तुमच्या भाषेत गोष्ट लिहिते.', final: 'अंतिम निकाल', decidedRules: 'नियमांनी ठरवले.',
+    decidedNone: 'कोणतीही युक्ती अलर्टच्या मर्यादेपर्यंत पोहोचली नाही.', decidedModel: (t) => `भाषा मॉडेलने ${t} वाजता वाढवले.`, modelNone: 'या कॉलचे मूल्यमापन केले नाही',
+    modelAgrees: 'निकाल बदलला नाही', modelRaised: (t) => `${t} वाजता अलर्ट वाढवला`, tactics: (n) => `${n} युक्त्या ऐकल्या`,
+    aiWaiting: 'सारांश लिहिला जात आहे…', aiCta: 'अजून लिहिला नाही. खालील AI सारांश वापरा.',
   },
   loading: 'अहवाल लोड होत आहे…', loadError: 'अहवाल लोड करता आला नाही.', noTimeline: 'या विश्लेषणाची कालरेषा नाही. फक्त लाइव्ह कॉलची कालरेषा तयार होते.',
 }

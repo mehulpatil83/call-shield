@@ -2,13 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as api from '../api'
 import { LANG_NAMES, STRINGS, categoryText } from '../i18n'
 import type { Lang } from '../types'
-import { currentIndex, describe, filterEvents, fmtCall, fmtClock, markQuotes, primaryTrack, stats, type Filters } from './derive'
+import { useAtmosphere } from '../ui/fx/effects'
+import GlitchLayer from '../ui/fx/GlitchLayer'
+import Ring from '../ui/Ring'
+import { currentIndex, decidedBy, describe, filterEvents, firstSentence, fmtCall, fmtClock, markQuotes, modelRaisedAt, primaryTrack, rulesLevel, stats, type Filters } from './derive'
 import RiskChart from './RiskChart'
 import { RTEXT } from './strings'
 import { SOURCES, type AiResult, type SessionEvent, type SessionResponse, type Source } from './types'
 
 interface Props {
-  id: string; lang: Lang; onLang: (l: Lang) => void; onBack: () => void; onTechnical: () => void; onDeleted: () => void
+  id: string; lang: Lang; onBack: () => void; onTechnical: () => void; onDeleted: () => void
   load?: (id: string) => Promise<SessionResponse>
   writeAi?: (id: string, lang: Lang, consent: boolean, force: boolean) => Promise<{ ai: AiResult; cached: boolean }>
 }
@@ -18,7 +21,7 @@ const store = {
   set: (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* storage may be unavailable */ } },
 }
 
-export default function ReportPage({ id, lang, onLang, onBack, onTechnical, onDeleted, load = api.getSession, writeAi = api.writeAi }: Props) {
+export default function ReportPage({ id, lang, onBack, onTechnical, onDeleted, load = api.getSession, writeAi = api.writeAi }: Props) {
   const t = STRINGS[lang]
   const r = RTEXT[lang]
   const [data, setData] = useState<SessionResponse | null>(null)
@@ -42,6 +45,7 @@ export default function ReportPage({ id, lang, onLang, onBack, onTechnical, onDe
   }, [id, load])
 
   const session = data?.session ?? null
+  useAtmosphere(session?.max_level ?? 'low')
   const dur = session?.duration ?? 0
 
   useEffect(() => {
@@ -94,11 +98,17 @@ export default function ReportPage({ id, lang, onLang, onBack, onTechnical, onDe
   }, [currentSeg])
 
   if (error) return <section className="card"><p className="notice warn" role="alert">{r.loadError} {error}</p><button type="button" className="button secondary" onClick={onBack}>{r.back}</button></section>
-  if (!session || !data) return <section className="card"><p>{r.loading}</p></section>
+  if (!session || !data) return <section className="card skeleton-card" aria-busy="true"><p>{r.loading}</p><div className="skeleton" /><div className="skeleton short" /><div className="skeleton" /></section>
 
   const st = stats(session)
   const when = (v: number | null) => (v === null ? r.notReached : fmtCall(v))
   const ai = aiMap[lang]
+  const rLevel = rulesLevel(session)
+  const decided = decidedBy(session)
+  const raisedAt = modelRaisedAt(session)
+  const modelPct = st.modelPeak === null ? null : Math.round(st.modelPeak * 100)
+  const modelTone = st.modelPeak === null ? 'neutral' : st.modelPeak >= 0.95 ? 'high' : st.modelPeak >= 0.85 ? 'elevated' : 'low'
+  const decidedText = decided.by === 'none' ? r.combined.decidedNone : decided.by === 'model' ? r.combined.decidedModel(fmtCall(decided.at ?? 0)) : r.combined.decidedRules
   const toggleSource = (s: Source) => setFilters((f) => { const next = new Set(f.sources); if (next.has(s)) next.delete(s); else next.add(s); return { ...f, sources: next } })
   const seek = (v: number) => { setPlaying(false); setCursor(v) }
   const pick = (e: SessionEvent) => seek(e.t)
@@ -129,17 +139,13 @@ export default function ReportPage({ id, lang, onLang, onBack, onTechnical, onDe
         <button type="button" className="button secondary" onClick={() => window.print()}>{r.print}</button>
         <button type="button" className="button secondary" onClick={download}>{r.exportJson}</button>
         <button type="button" className="button danger" onClick={remove}>{r.delete}</button>
-        <label className="field compact"><span className="visually-hidden">{r.language}</span>
-          <select value={lang} onChange={(e) => onLang(e.target.value as Lang)} aria-label={r.language}>
-            {(Object.keys(LANG_NAMES) as Lang[]).map((l) => <option key={l} value={l}>{LANG_NAMES[l]}</option>)}
-          </select>
-        </label>
       </div>
 
       <h2>{r.title}</h2>
       <p className="mut">{new Date(session.started_at).toLocaleString()}</p>
 
-      <section className="card rp-stats" aria-label={r.verdict}>
+      <section className="card rp-stats has-fx" aria-label={r.verdict}>
+        <GlitchLayer tone={st.maxLevel} interactive={false} />
         <dl>
           <div><dt>{r.verdict}</dt><dd><span className={`badge ${st.maxLevel}`} data-testid="rp-verdict">{t.levels[st.maxLevel]}</span></dd></div>
           <div><dt>{r.duration}</dt><dd>{fmtCall(st.duration)}</dd></div>
@@ -149,6 +155,39 @@ export default function ReportPage({ id, lang, onLang, onBack, onTechnical, onDe
           <div><dt>{r.modelPeak}</dt><dd>{st.modelPeak === null ? '—' : `${Math.round(st.modelPeak * 100)}%`}</dd></div>
           <div><dt>{r.voice}</dt><dd>{st.voice ?? '—'}</dd></div>
         </dl>
+      </section>
+
+
+      <section className="card combined" aria-labelledby="cmb-title" data-testid="rp-combined">
+        <div className="cmb-head">
+          <div><h3 id="cmb-title">{r.combined.title}</h3><p className="mut"><small>{r.combined.sub}</small></p></div>
+          <div className="cmb-final">
+            <span className="mut">{r.combined.final}</span>
+            <span className={`badge big ${st.maxLevel}`}>{t.levels[st.maxLevel]}</span>
+            <small data-testid="rp-decided">{decidedText}</small>
+          </div>
+        </div>
+        <div className="cmb-grid">
+          <article className="cmb-panel" data-testid="cmb-rules">
+            <h4>{r.combined.rules}</h4><p className="mut"><small>{r.combined.rulesDesc}</small></p>
+            <p><span className={`badge ${rLevel}`}>{t.levels[rLevel]}</span> <small className="mut">{r.combined.tactics(st.tactics.length)}</small></p>
+            <p className="chips">{st.tactics.length === 0 ? <small className="mut">{r.none}</small> : st.tactics.map((k) => (
+              <span key={k} className="chip static" title={allEvents.find((e) => e.kind === 'tactic' && e.category === k)?.quote}>{categoryText(t, k).label}</span>))}</p>
+          </article>
+          <article className="cmb-panel" data-testid="cmb-model">
+            <h4>{r.combined.model}</h4><p className="mut"><small>{r.combined.modelDesc}</small></p>
+            <div className="cmb-ring">
+              <Ring value={st.modelPeak ?? 0} label={modelPct === null ? '—' : `${modelPct}%`} caption={r.modelPeak} tone={modelTone as 'low' | 'elevated' | 'high' | 'neutral'} />
+              <p>{modelPct === null ? r.combined.modelNone : raisedAt !== null ? r.combined.modelRaised(fmtCall(raisedAt)) : r.combined.modelAgrees}</p>
+            </div>
+          </article>
+          <article className="cmb-panel" data-testid="cmb-ai">
+            <h4>{r.combined.ai}</h4><p className="mut"><small>{r.combined.aiDesc}</small></p>
+            {ai ? <p className="plain">{firstSentence(ai.summary)}</p>
+              : aiBusy ? <p className="mut shimmer-text">{r.combined.aiWaiting}</p>
+              : <p className="mut">{data.ai_status.configured ? r.combined.aiCta : r.ai.notSet}</p>}
+          </article>
+        </div>
       </section>
 
       <section className="card" aria-labelledby="rp-quick">
@@ -162,7 +201,7 @@ export default function ReportPage({ id, lang, onLang, onBack, onTechnical, onDe
         {!data.ai_status.configured && <><p className="notice">{r.ai.notSet}</p><p className="mut"><small>{r.ai.howTo}</small></p></>}
         {data.ai_status.configured && !ai && (
           <div className="no-print">
-            <label className="check"><input type="checkbox" checked={consent} onChange={(e) => { setConsent(e.target.checked); store.set('cs-ai-consent', e.target.checked ? '1' : '0') }} />
+            <label className="check"><input type="checkbox" checked={consent} onChange={(e) => { setConsent(e.target.checked); store.set('cs-ai-consent', e.target.checked ? '1' : '0'); setAuto(e.target.checked); store.set('cs-ai-auto', e.target.checked ? '1' : '0') }} />
               <span>{r.ai.consent(data.ai_status.sends_to ?? '')}</span></label>
             <label className="check"><input type="checkbox" checked={auto} disabled={!consent} onChange={(e) => { setAuto(e.target.checked); store.set('cs-ai-auto', e.target.checked ? '1' : '0') }} />
               <span>{r.ai.auto}</span></label>
@@ -215,7 +254,8 @@ export default function ReportPage({ id, lang, onLang, onBack, onTechnical, onDe
                 {shown.map((e, i) => {
                   const d = describe(e, r, t)
                   return (
-                    <li key={e.i} className={`${i === cur ? 'now' : ''}${cursor !== null && e.t > cursor ? ' future' : ''}`} aria-current={i === cur ? 'true' : undefined}>
+                    <li key={e.i} className={`${i === cur ? 'now' : ''}${cursor !== null && e.t > cursor ? ' future' : ''}`} aria-current={i === cur ? 'true' : undefined}
+                        style={{ ['--i' as string]: Math.min(i, 14) } as React.CSSProperties}>
                       <button type="button" onClick={() => pick(e)}>
                         <span className="rp-time"><strong>{fmtCall(e.t)}</strong><small>{fmtClock(e.wall)}</small></span>
                         <span className={`tag src-${e.source}`}>{r.sources[e.source]}</span>

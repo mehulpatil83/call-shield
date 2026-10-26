@@ -34,7 +34,7 @@ const AI: AiResult = { lang: 'en', model: '@cf/test', provider: 'cloudflare', ma
 const resp = (over: Partial<SessionResponse> = {}): SessionResponse => ({ session: SESSION, ai: {}, ai_status: { configured: false, provider: null, model: null, sends_to: null }, ...over })
 
 function page(over: Partial<SessionResponse> = {}, extra: Partial<React.ComponentProps<typeof ReportPage>> = {}) {
-  const props = { id: 'aaaaaaaaaaaa', lang: 'en' as const, onLang: vi.fn(), onBack: vi.fn(), onTechnical: vi.fn(), onDeleted: vi.fn(), load: async () => resp(over), ...extra }
+  const props = { id: 'aaaaaaaaaaaa', lang: 'en' as const, onBack: vi.fn(), onTechnical: vi.fn(), onDeleted: vi.fn(), load: async () => resp(over), ...extra }
   return { props, ...render(<ReportPage {...props} />) }
 }
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
@@ -132,13 +132,32 @@ describe('ReportPage', () => {
     expect(screen.getByTestId('rp-play')).toHaveTextContent(RTEXT.en.replay)
   })
 
-  it('switches language through the page selector and shows the text in that language', async () => {
+  it('shows the page in the language it is given', async () => {
     const { props, rerender } = page()
     await screen.findByTestId('rp-verdict')
-    fireEvent.change(screen.getByLabelText(RTEXT.en.language), { target: { value: 'mr' } })
-    expect(props.onLang).toHaveBeenCalledWith('mr')
+    expect(screen.getByText(RTEXT.en.timelineTitle)).toBeTruthy()
     rerender(<ReportPage {...props} lang="mr" />)
     expect(screen.getByText(RTEXT.mr.timelineTitle)).toBeTruthy()
+    expect(screen.queryByLabelText(RTEXT.en.language)).toBeNull()                       // the language is chosen once, in the page header
+  })
+
+  it('combines what the rules, the language model and the AI summary found', async () => {
+    page({ ai: { en: AI }, ai_status: { configured: true, provider: 'groq', model: 'm', sends_to: 'Groq' } })
+    const box = await screen.findByTestId('rp-combined')
+    expect(within(box).getByTestId('rp-decided')).toHaveTextContent(RTEXT.en.combined.decidedRules)
+    expect(within(within(box).getByTestId('cmb-rules')).getByText(STRINGS.en.levels.high)).toBeTruthy()
+    expect(within(box).getByTestId('cmb-rules').textContent).toContain(RTEXT.en.combined.tactics(2))
+    expect(within(box).getByTestId('cmb-model').textContent).toContain('90%')                       // the model's peak from the risk history
+    expect(within(box).getByTestId('cmb-model').textContent).toContain(RTEXT.en.combined.modelAgrees)
+    expect(within(box).getByTestId('cmb-ai').textContent).toContain('The caller asked for a code.')
+  })
+
+  it('says when the language model is what raised the alert', async () => {
+    const raised = { ...SESSION, events: SESSION.events.map((e) => (e.i === 6 ? { ...e, source: 'model' as const } : e)) }
+    page({ session: raised })
+    const box = await screen.findByTestId('rp-combined')
+    expect(within(box).getByTestId('rp-decided')).toHaveTextContent(RTEXT.en.combined.decidedModel('00:12.4'))
+    expect(within(box).getByTestId('cmb-model').textContent).toContain(RTEXT.en.combined.modelRaised('00:12.4'))
   })
 
   it('without an AI service it says so and offers no button', async () => {
@@ -187,7 +206,7 @@ describe('ReportPage', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     fireEvent.click(screen.getByRole('button', { name: RTEXT.en.delete }))
     await waitFor(() => expect(props.onDeleted).toHaveBeenCalled())
-    render(<ReportPage id="bbbbbbbbbbbb" lang="en" onLang={() => {}} onBack={() => {}} onTechnical={() => {}} onDeleted={() => {}}
+    render(<ReportPage id="bbbbbbbbbbbb" lang="en" onBack={() => {}} onTechnical={() => {}} onDeleted={() => {}}
                        load={async () => { throw new Error('There is no timeline') }} />)
     expect(await screen.findByRole('alert')).toHaveTextContent('There is no timeline')
   })

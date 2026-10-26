@@ -6,6 +6,10 @@ import LivePanel from './components/LivePanel'
 import ProgressCard from './components/ProgressCard'
 import ReportView from './components/ReportView'
 import ReportPage from './report/ReportPage'
+import AppBackdrop from './ui/fx/Backdrop'
+import EffectsControl from './ui/fx/EffectsControl'
+import { EffectsProvider } from './ui/fx/effects'
+import GlitchLayer from './ui/fx/GlitchLayer'
 import { RTEXT } from './report/strings'
 import SpeakerPage from './components/SpeakerPage'
 import UploadCard from './components/UploadCard'
@@ -99,7 +103,7 @@ function AnalysisView({ id, lang, onBack }: { id: string; lang: Lang; onBack: ()
   return <ReportView detail={detail} t={t} onDelete={remove} onBack={onBack} timelineLabel={live ? RTEXT[lang].title : undefined} />
 }
 
-function LocalApp() {
+function LocalAppInner() {
   const [lang, setLang] = useLang()
   const t = STRINGS[lang]
   const [route, setRoute] = useRoute()
@@ -146,7 +150,8 @@ function LocalApp() {
 
   return (
     <div className="page">
-      <header className="top">
+      <header className="top has-fx">
+        <GlitchLayer tone="low" />
         <div>
           <h1>{t.appName}</h1>
           <p className="mut">{t.tagline}</p>
@@ -157,6 +162,7 @@ function LocalApp() {
             {(Object.keys(LANG_NAMES) as Lang[]).map((k) => <option key={k} value={k}>{LANG_NAMES[k]}</option>)}
           </select>
         </label>
+        <EffectsControl lang={lang} />
       </header>
       <nav className="tabs" aria-label="Main">
         <button type="button" className={`tab${route.name === 'home' || route.name === 'analysis' ? ' active' : ''}`} aria-current={route.name === 'home' || route.name === 'analysis' ? 'page' : undefined}
@@ -176,7 +182,7 @@ function LocalApp() {
       ) : route.name === 'join' ? (
         <SpeakerPage t={t} initialCode={route.code} />
       ) : route.name === 'report' ? (
-        <ReportPage id={route.id} lang={lang} onLang={setLang} onBack={() => setRoute({ name: 'home' })}
+        <ReportPage id={route.id} lang={lang} onBack={() => setRoute({ name: 'home' })}
                     onTechnical={() => setRoute({ name: 'analysis', id: route.id })} onDeleted={() => setRoute({ name: 'home' })} />
       ) : id ? (
         <AnalysisView id={id} lang={lang} onBack={() => setId(null)} />
@@ -215,6 +221,15 @@ export function SpeakerApp() {
       </header>
       <SpeakerPage t={t} initialCode={code} />
     </div>
+  )
+}
+
+function LocalApp() {
+  return (
+    <EffectsProvider>
+      <AppBackdrop />
+      <LocalAppInner />
+    </EffectsProvider>
   )
 }
 

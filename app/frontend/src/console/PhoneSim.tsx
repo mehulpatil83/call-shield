@@ -6,6 +6,8 @@ import { splitTranscript } from '../highlight'
 import type { LiveState } from '../live/state'
 import type { SpeakResult } from '../alert/alertDeps'
 import { formatClock } from './derive'
+import GlitchLayer from '../ui/fx/GlitchLayer'
+import PhoneFrame from '../ui/fx/PhoneFrame'
 
 export interface Focus { category: string; quote: string }
 
@@ -48,7 +50,8 @@ export default function PhoneSim({ t, state, elapsed, listening, takeover, strip
 
   const evidence = topEvidence(state.hits, 2)
   return (
-    <div className="phone" data-testid="phone">
+    <div className="phone-wrap" data-testid="phone">
+    <PhoneFrame level={state.level} label={c.unknownCaller}>
       <div className="phone-screen">
         <div className="phone-status" aria-hidden="true"><span>{clock}</span><span>▂▄▆ 5G</span></div>
         <div className={`phone-risk ${state.level}`} aria-hidden="true" data-testid="phone-risk"><span>{t.levels[state.level]}</span></div>
@@ -75,6 +78,7 @@ export default function PhoneSim({ t, state, elapsed, listening, takeover, strip
         </div>
         {takeover && (
           <div className="phone-takeover" role="alert" data-testid="phone-takeover">
+            <GlitchLayer tone="alert" strength={1.4} interactive={false} />
             <p className="ax-icon" aria-hidden="true">⚠</p>
             <h3>{t.alert.headline}</h3>
             <p>{t.alert.subline}</p>
@@ -90,6 +94,7 @@ export default function PhoneSim({ t, state, elapsed, listening, takeover, strip
           </div>
         )}
       </div>
+    </PhoneFrame>
     </div>
   )
 }

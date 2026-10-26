@@ -46,7 +46,7 @@ export default function RiskGraph({ t, history, events, level, score }: Props) {
               <polygon className={`area ${level}`} points={`${x(history[0].t)},${y(0)} ${history.map((p) => `${x(p.t)},${y(p.score)}`).join(' ')} ${x(last)},${y(0)}`} />
             )}
             {history.slice(1).map((p, i) => (
-              <line key={i} x1={x(history[i].t)} y1={y(history[i].score)} x2={x(p.t)} y2={y(p.score)} className={`seg ${p.level}`} />
+              <line key={i} x1={x(history[i].t)} y1={y(history[i].score)} x2={x(p.t)} y2={y(p.score)} pathLength={1} className={`seg ${p.level}`} />
             ))}
             {alerts.map((e) => (
               <g key={e.id} className={`marker ${e.alertLevel}`} data-testid={`marker-${e.alertLevel}`}>
@@ -55,7 +55,7 @@ export default function RiskGraph({ t, history, events, level, score }: Props) {
               </g>
             ))}
             {history.map((p, i) => (
-              <circle key={i} cx={x(p.t)} cy={y(p.score)} r={hover === i ? 6 : 3.5} className={`pt ${p.level}`}
+              <circle key={i} cx={x(p.t)} cy={y(p.score)} r={hover === i ? 6 : 3.5} className={`pt ${p.level}${i === history.length - 1 ? ' latest' : ''}`}
                       tabIndex={p.fresh.length > 0 || i === history.length - 1 ? 0 : -1} data-testid="graph-point"
                       aria-label={`${formatClock(p.t)}, ${c.tipScore(p.score)}`}
                       onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onBlur={() => setHover(null)} />

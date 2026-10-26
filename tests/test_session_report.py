@@ -312,7 +312,8 @@ def test_parsing_survives_prose_around_the_json_and_a_cut_off_answer():
     assert report_ai._extract(parts) == "{\"summary\": \"ok\"}"
     with pytest.raises(report_ai.AiError, match="reasoning"):
         report_ai._extract({"choices": [{"message": {"content": None, "reasoning": "thinking..."}}]})
-    assert "no text before or after it" in report_ai.build_messages(report_ai.build_facts(RECORD), "en")[0]["content"]
+    system = report_ai.build_messages(report_ai.build_facts(RECORD), "en")[0]["content"]
+    assert "no text before or after it" in system and "Do NOT mention phone numbers" in system and "rest on a tactic" in system and "not mention call-shield" in system
 
 
 def test_the_connection_check_uses_a_fictional_call_and_works_with_a_fake_service(monkeypatch, capsys):

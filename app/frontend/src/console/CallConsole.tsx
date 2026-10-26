@@ -1,3 +1,5 @@
+import { useAtmosphere } from '../ui/fx/effects'
+import RiskSlider from '../ui/RiskSlider'
 import { useState } from 'react'
 import { AlertSettingsPanel } from '../alert/AlertOverlay'
 import { useAlertExperience } from '../alert/useAlertExperience'
@@ -25,6 +27,7 @@ interface Props {
 
 /** The call console: live analysis on the left, a phone call simulation on the right. */
 export default function CallConsole({ t, state, language, listening, audio, onListen, onEnd, onAgain, onOpenReport }: Props) {
+  useAtmosphere(state.level)
   const c = t.console
   const ax = useAlertExperience(t, state)
   const elapsed = useElapsed(state.status)
@@ -60,9 +63,7 @@ export default function CallConsole({ t, state, language, listening, audio, onLi
           </div>
           <div className="meter-row">
             <span>{t.live.meter}</span>
-            <div className="meter" role="meter" aria-label={t.live.meter} aria-valuemin={0} aria-valuemax={10} aria-valuenow={state.score}>
-              <div className={`meter-bar ${state.level}`} style={{ width: `${Math.min(10, state.score) * 10}%` }} />
-            </div>
+            <RiskSlider label={t.live.meter} level={state.level} score={state.score} />
             <span className={`badge ${state.level}`} data-testid="live-level">{t.levels[state.level]}</span>
           </div>
           {state.alert && (

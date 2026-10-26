@@ -1,3 +1,4 @@
+import GlitchLayer from '../ui/fx/GlitchLayer'
 import { useEffect } from 'react'
 import { categoryText, type Dict } from '../i18n'
 import type { LiveState } from '../live/state'
@@ -55,6 +56,7 @@ export default function AlertOverlay({ t, state, shown, settings, voice, onDismi
     <>
       {overlay && (
         <div className="ax-overlay" role="alertdialog" aria-modal="true" aria-labelledby="ax-title" aria-describedby="ax-sub" data-testid="alert-overlay">
+        <GlitchLayer tone="alert" strength={2} />
           <div className="ax-card">
             <p className="ax-icon" aria-hidden="true">⚠</p>
             <h2 id="ax-title">{a.headline}</h2>

@@ -107,3 +107,28 @@ export function markQuotes(text: string, quotes: string[]): { text: string; hit:
   if (pos < text.length) out.push({ text: text.slice(pos), hit: false })
   return out.length ? out : [{ text, hit: false }]
 }
+
+const RANK: Record<Level, number> = { low: 0, elevated: 1, high: 2 }
+
+/** The highest level the RULES alone reached (what they found, without the language model). */
+export function rulesLevel(s: Session): Level {
+  let best: Level = 'low'
+  for (const e of s.events) if (e.kind === 'level' && e.source === 'rules' && e.to && RANK[e.to] > RANK[best]) best = e.to
+  return best
+}
+
+/** Who pushed the call to its final level: the rules, or the language model (and when). */
+export function decidedBy(s: Session): { by: 'rules' | 'model' | 'none'; at: number | null } {
+  if (s.max_level === 'low') return { by: 'none', at: null }
+  const e = s.events.find((x) => x.kind === 'level' && x.to === s.max_level)
+  if (!e) return { by: 'rules', at: null }
+  return { by: e.source === 'model' ? 'model' : 'rules', at: e.t }
+}
+
+export function modelRaisedAt(s: Session): number | null {
+  return s.events.find((x) => x.kind === 'level' && x.source === 'model')?.t ?? null
+}
+
+export function firstSentence(text: string): string {
+  return text.match(/^.*?[.!?।](\s|$)/s)?.[0].trim() ?? text
+}

@@ -1,3 +1,5 @@
+import { useAtmosphere } from '../ui/fx/effects'
+import RiskSlider from '../ui/RiskSlider'
 import { splitTranscript } from '../highlight'
 import { categoryText, type Dict } from '../i18n'
 import AlertOverlay from '../alert/AlertOverlay'
@@ -15,6 +17,7 @@ interface Props {
 
 /** Presentational part of the live check: meter, alert, evidence and transcript. */
 export default function LiveView({ t, state, onOpenReport, onAgain, advice = false }: Props) {
+  useAtmosphere(state.level)
   const l = t.live
   const ax = useAlertExperience(t, state)
   const status = { idle: '', connecting: l.connecting, waiting: t.call.waitingSpeaker, joined: t.call.speakerJoined, live: l.listening, reconnecting: t.call.reconnecting, stopping: l.stopping, ended: '', error: '' }[state.status]
@@ -33,9 +36,7 @@ export default function LiveView({ t, state, onOpenReport, onAgain, advice = fal
 
       <div className="meter-row">
         <span>{l.meter}</span>
-        <div className="meter" role="meter" aria-label={l.meter} aria-valuemin={0} aria-valuemax={10} aria-valuenow={state.score}>
-          <div className={`meter-bar ${state.level}`} style={{ width: `${Math.min(10, state.score) * 10}%` }} />
-        </div>
+        <RiskSlider label={l.meter} level={state.level} score={state.score} />
         <span className={`badge ${state.level}`} data-testid="live-level">{t.levels[state.level]}</span>
       </div>
 
